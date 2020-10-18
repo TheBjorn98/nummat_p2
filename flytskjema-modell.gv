@@ -1,0 +1,40 @@
+digraph G {
+    Wk[label="Wk: d x d mx"]
+    bk[label="bk: d-vec"]
+    yi[label="yi: d-vec"]
+    Y[label="Y: d x I-mx\nAll yi"]
+    w[label="w: d-vec"]
+    mu[label="mu: scalar"]
+    F[label="F(yi) = ci:\nfunction from Rd to R"]
+    c[label="c: I-vec\nAll ci"]
+    Ups[label="Ups: I-vec\nApprox. c"]
+    Yc[label="||Ups - c||\nError in approx"]
+    Fa[label="~F(yi; th): ANN\nfunc approx"]
+    
+    sig[label="sig\nactivation fn"]
+    dsig[label="d/dx * sig\nfor back-prop"]
+    
+    Zk[label="Z_k: d x I mx\nintermediate vals"]
+    ZK[label="ZK: d x I mx\noutputl layer"]
+    Pk[label="P_k: d x I mx\nback prop"]
+    PK[label="PK: d x I mx\n back prop @ output"]
+    
+    eta[label="eta: hypothesis fn"]
+    deta[label="d/dx * eta\nfor back-prop"]
+    th[label="th: ANN params"]
+    dJ[label="dJ: gradient of obj func\nadjusts ANN"]
+    J[label="J: obj func\nmeasures error"]
+    
+    {c, Ups} -> Yc -> J
+    yi -> Y -> F -> c
+    Y -> Fa
+    {Wk, bk, w, mu} -> th -> Fa
+    sig -> {Zk, ZK}
+    deta -> PK
+    {dsig, PK} -> Pk
+    
+    {PK, Pk, Zk, ZK} -> dJ -> th
+    
+    Fa -> Zk -> ZK -> eta -> Ups
+    
+}
