@@ -1,5 +1,7 @@
 import numpy as np
 
+from support import concatflat, reconstruct_flat
+
 # Script defining the necessary functions for the ANN
 
 # TODO: add sig, sigPr, eta and etaPr as inputs to functions
@@ -146,10 +148,14 @@ def getYc(Upsilon, c):
 
 # the non transpose of the non (Upsilon - c) part of equation 8
 # This showed up a lot and was useful to have as a function
+
+
 def getNu(ZK, w, mu):
     return etaPr(ZK.T @ w + mu)
 
 # Common part between equation 12 and 13
+
+
 def getHk(Ps, Zs, K, h, W, b):
 
     d = np.shape(Ps)[0]
@@ -235,10 +241,21 @@ def updateTheta(tau, dJ, W, b, w, mu):
     return (Wn, bn, wn, mun)
 
 
+def setupAdam(dim):
+    v = np.zeros(dim)
+    m = np.zeros(dim)
+    return (v, m)
+
+
 # TODO: find a concise way to construct theta from W, b, w and mu
 # and recover these from theta
-def adamTheta(dJ, W, b, w, mu):
-    pass
+def adamTheta(v, m, dJ, W, b, w, mu):
+    beta1 = 0.9
+    beta2 = 0.999
+    alpha = 0.01
+    epsilon = 1e-8
+    #
+    theta = np.concatenate(W.flatten(), b.flatten(), w.flatten(), [mu])
 
 
 # d: height of hidden layers
@@ -251,6 +268,7 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
     '''
     d, K, h and tau are model parameters for:
         d: dimension of spaces in hidden layers
+
         K: number of hidden layers in the ResNet model
         h: stepsize for emphazising internal layers in the model
         tau: learning parameter declaring how much of the gradient is included
@@ -314,3 +332,17 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
         it += 1
 
     return (W, b, w, mu, Js)
+
+
+if __name__ == '__main__':
+    x = np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+    y = np.array([[9, 10], [11, 12]])
+    z = np.array([13, 14])
+    w = 15
+    u = concatflat((x, y, z, w))
+    print(u)
+    a, b, c, d = reconstruct_flat([np.array(i).shape for i in (x, y, z, w)], u)
+    print(a)
+    print(b)
+    print(c)
+    print(d)
