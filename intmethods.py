@@ -7,7 +7,7 @@ def symEuler(p0,q0,dTdp,dVdq,h):
 
 def stVerlet(p0,q0,dTdp,dVdq,dt):
     p_12 = p0 - dt/2*dVdq(q0)
-    q = q + dt*dTdp(p_12)
+    q = q0 + dt*dTdp(p_12)
     p = p_12 - dt/2*dVdq(q)
     return p, q
 
