@@ -29,6 +29,15 @@ def etaPr(x):
     return .25 * (1 - np.tanh(x / 2)**2)
 
 
+# Thought make one that only returns last layer
+
+# Equation 4
+# Returns all the hidden layer node values for I input vectors
+# Y: d x I matrix of I input vectors
+# K: Integer number of hidden layers
+# h: stepsize
+# W: d x d x K 3-tensor: colletion of weight matrices
+# b: d x K matrix: list of all b_k offsets
 def getZ(Y, K, h, W, b):
     d = np.shape(Y)[0]
     I = np.shape(Y)[1]
@@ -39,13 +48,14 @@ def getZ(Y, K, h, W, b):
 
     Zs[:, :, 0] = Y
 
-    for i in range(1, K + 1):
+    for i in range(K):
         # TODO: Consider fixing indices so that transpose are no longer
         # necessary
-        Zs[:, :, i] = (
-            Zs[:, :, i - 1] + (
+        # or TODO: Explain transpose shit
+        Zs[:, :, i + 1] = (
+            Zs[:, :, i] + (
                 h * sigma(
-                    (W[:, :, i - 1] @ Zs[:, :, i - 1]).T + b[:, i - 1]
+                    (W[:, :, i] @ Zs[:, :, i]).T + b[:, i]
                 ).T
             )
         )
@@ -53,10 +63,16 @@ def getZ(Y, K, h, W, b):
     return Zs
 
 
+# Equation 5
+# Returns d x I matrix of all the I Upsilon vectors
+# ZK: d x I matrix of last layer Z
+# mu: offset scalar
 def getUpsilon(ZK, w, mu):
     return eta((ZK.T @ w) + mu)
 
 
+# Equation 10
+# Yc = (Upsilon - c)
 def getPK(Yc, ZK, w, mu):
 
     I = np.shape(ZK)[1]
@@ -83,6 +99,7 @@ def getPK(Yc, ZK, w, mu):
     )
 
 
+# Equation 11
 def getP(PK, Zs, h, K, W, b):
 
     d = np.shape(PK)[0]
@@ -122,21 +139,24 @@ def getP(PK, Zs, h, K, W, b):
     return Ps
 
 
+# Upsilon: I dim vector
+# c: I vector of fasit
 def getYc(Upsilon, c):
     return (Upsilon.T - c).T
 
-
+# the non transpose of the non (Upsilon - c) part of equation 8
+# This showed up a lot and was useful to have as a function
 def getNu(ZK, w, mu):
     return etaPr(ZK.T @ w + mu)
 
-
+# Common part between equation 12 and 13
 def getHk(Ps, Zs, K, h, W, b):
 
     d = np.shape(Ps)[0]
     I = np.shape(Ps)[1]
     Hs = np.zeros((d, I, K))
 
-    for i in range(K-1):
+    for i in range(K - 1):
 
         # TODO: recondense this expansion
 
@@ -157,6 +177,15 @@ def getHk(Ps, Zs, K, h, W, b):
     return Hs
 
 
+# Ups: d x I matrix of approx results
+# c: I vector of exact results
+# Ps: d x I x K tensor of all the "propagator values"
+# Zs: d x I (K + 1) tensor of all the hidden layer node values
+# h: step size
+# W: d x d x K tensor of weights
+# b: d x K matrix of offsets
+# w: d vector of output weights
+# mu: offset scalar
 def getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu):
 
     d = np.shape(Ps)[0]
@@ -174,7 +203,7 @@ def getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu):
     dJdbk = np.zeros((d, K))
     for i in range(K):
         dJdWk[:, :, i] = Hs[:, :, i] @ Zs[:, :, i].T
-        dJdbk[:, i] = Hs[:, :, i] @ np.ones((I))
+        dJdbk[:, i] = Hs[:, :, i] @ np.ones(I)
 
     # print("Hs:\n{}".format(Hs))
     # print("Zs:\n{}".format(Zs))
@@ -183,9 +212,19 @@ def getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu):
     # print("Hk: {}".format(np.shape(Hs[:, :, 0])))
     # dJdbk = np.array([ for i in range(K)])
 
+    # dJdWk: d x d x K tensor of allllll the derivatives
+    # dJdbk: d x K matrix of all the derivatives
+    # dJdw: d vec of all derivatives
+    # dJdmu: scalar derivative
     return (dJdWk, dJdbk, dJdw, dJdmu)
 
 
+# tau: scalar learing factor (gradient decent step size)
+# dJ: (3 dim, 2 dim, 1 dim, 0 dim) 4 tuple of derivatives
+# W: hidden weights
+# b: hidden offsets
+# w: output weights
+# mu: output offset
 def updateTheta(tau, dJ, W, b, w, mu):
 
     Wn = W - tau * dJ[0]
@@ -202,6 +241,12 @@ def adamTheta(dJ, W, b, w, mu):
     pass
 
 
+# d: height of hidden layers
+# K: amount of hidden layers
+# h: stepsize
+# tau: learining factor
+# Y: d x I matrix of training input data
+# c: I vector of traning answers
 def trainANN(d, K, h, tau, Y, c, it_max, tol):
     '''
     d, K, h and tau are model parameters for:
