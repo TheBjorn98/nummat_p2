@@ -1,6 +1,6 @@
 import numpy as np
 
-def symEuler(p0,q0,dTdp,dVdq,h):
+def symEuler(p0,q0,dTdp,dVdq,h): #Burde sende de inn som np.array()
     q = q0 + h*dTdp(p0)
     p = p0 -  h*dVdq(q)
     return p, q
@@ -24,7 +24,7 @@ def intMeth(p,q,dTdp, dVdq, it_max, tol, func, step):
         p, q = func(p, q, dTdp, dVdq, step)
         ps.append(p)
         qs.append(q)
-        diff = np.linalg.norm(ps[-2] - ps[-1]) #Marcus fiks denne koden, takk
+        diff = (np.linalg.norm(ps[-2] - ps[-1]) + np.linalg.norm(qs[-2] - qs[-1]))/2 #Marcus fiks denne koden, takk
         it += 1
 
     return ps, qs
