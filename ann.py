@@ -31,7 +31,17 @@ def etaPr(x):
     return .25 * (1 - np.tanh(x / 2)**2)
 
 
-# Thought make one that only returns last layer
+# Function to make function
+def make_model_function(parameter):
+    def function_inside(x):
+        print(x * parameter)
+    return function_inside
+
+
+f = make_function(3.14)
+
+f(2.71)
+
 
 # Equation 4
 # Returns all the hidden layer node values for I input vectors
@@ -276,6 +286,8 @@ def adamTheta(state, dJ, W, b, w, mu):
 # tau: learining factor
 # Y: d x I matrix of training input data
 # c: I vector of traning answers
+#
+# TODO: Take padding mode and descent_mode/tau as parameters in some other way
 def trainANN(d, K, h, tau, Y, c, it_max, tol):
     '''
     d, K, h and tau are model parameters for:
