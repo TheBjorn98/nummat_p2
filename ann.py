@@ -238,24 +238,36 @@ def updateTheta(tau, dJ, W, b, w, mu):
     wn = w - tau * dJ[2]
     mun = mu - tau * dJ[3]
 
-    return (Wn, bn, wn, mun)
+    return (tau, Wn, bn, wn, mun)
 
 
 def setupAdam(dim):
     v = np.zeros(dim)
     m = np.zeros(dim)
-    return (v, m)
+    return (v, m, 1)
 
 
 # TODO: find a concise way to construct theta from W, b, w and mu
 # and recover these from theta
-def adamTheta(v, m, dJ, W, b, w, mu):
+def adamTheta(state, dJ, W, b, w, mu):
     beta1 = 0.9
     beta2 = 0.999
     alpha = 0.01
     epsilon = 1e-8
     #
-    theta = np.concatenate(W.flatten(), b.flatten(), w.flatten(), [mu])
+    v, m, i = state
+    #
+    shapes = [W.shape, b.shape, w.shape, np.array(mu).shape]
+    theta = concatflat((W, b, w, mu))
+    g = concatflat(dJ)
+    m = beta1 * m + (1 - beta1) * g
+    v = beta2 * v + (1 - beta2) * (g * g)
+    m_hat = m / (1 - beta1**i)
+    v_hat = v / (1 - beta2**i)
+    theta = theta + alpha * m_hat / (np.sqrt(v_hat) + epsilon)
+    #
+    W, b, w, mu = reconstruct_flat(shapes, theta)
+    return ((v, m, i + 1), W, b, w, mu)
 
 
 # d: height of hidden layers
@@ -283,11 +295,29 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
 
     # TODO: implement more sophisticated tolerance criterion
 
+    # Padding the input data
+
     d0, I = np.shape(Y)
 
+    # paddingmode = "zeros"
+    paddingmode = "tiling"
+    # paddingmode = "repeat"
+
     if d0 < d:
-        pass
-        # TODO: code for embedding data if the dimensions mismatch
+        d_nice = np.ceil(d / d0)
+        if paddingmode == "zeros":
+            Y_pad = np.zeros((d, I))
+            Y_pad[:d0, :] = Y
+            Y = Y_pad
+        elif paddingmode == "tiling":
+            Y_pad = np.tile(Y, (int(d_nice / d0), 1))
+            Y = Y_pad[:d, :]
+        elif paddingmode == "repeat":
+            Y_pad = np.tile(Y, (int(d_nice / d0), 1))
+            Y = Y_pad[:d, :]
+    elif d0 > d:
+        raise Exception("Shit went wrong!")
+        # TODO: check code for embedding data if the dimensions mismatch
 
     # Initialization
 
@@ -295,6 +325,17 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
     b = np.random.uniform(size=(d, K))
     w = np.random.uniform(size=(d, 1))
     mu = np.random.uniform(size=(1, 1))
+
+    descent_mode = "gradient"
+    descent_mode = "adam"
+
+    if descent_mode == "gradient":
+        descent_state = tau
+        descent_function = updateTheta
+    elif descent_mode == "adam":
+        dim = np.sum([np.prod(W.shape), np.prod(b.shape), np.prod(w), 1])
+        descent_state = setupAdam(dim)
+        descent_function = adamTheta
 
     # Iteration
 
@@ -326,23 +367,11 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
 
         # Updating the weights and activations in the model
         # Update-scheme followinmg from details in the project
-        W, b, w, mu = updateTheta(.2, dJ, W, b, w, mu)
+        # W, b, w, mu = updateTheta(.2, dJ, W, b, w, mu)
+        (descent_state, W, b, w, mu) = descent_function(
+            descent_state, dJ, W, b, w, mu)
 
         # Another iteration complete!
         it += 1
 
     return (W, b, w, mu, Js)
-
-
-if __name__ == '__main__':
-    x = np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
-    y = np.array([[9, 10], [11, 12]])
-    z = np.array([13, 14])
-    w = 15
-    u = concatflat((x, y, z, w))
-    print(u)
-    a, b, c, d = reconstruct_flat([np.array(i).shape for i in (x, y, z, w)], u)
-    print(a)
-    print(b)
-    print(c)
-    print(d)
