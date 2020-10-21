@@ -31,16 +31,50 @@ def etaPr(x):
     return .25 * (1 - np.tanh(x / 2)**2)
 
 
+def make_padding_function(paddingmode, d):
+    if paddingmode == "zeros":
+        def pad_zero(Y):
+            d0, I = Y.shape
+            Y_pad = np.zeros((d, I))
+            Y_pad[:d0, :] = Y
+            return Y_pad
+        return pad_zero
+    elif paddingmode == "tiling":
+        def pad_tiling(Y):
+            d0, I = Y.shape
+            d_nice = np.ceil(d / d0)
+            Y_pad = np.tile(Y, (int(d_nice / d0), 1))
+            return Y_pad[:d, :]
+        return pad_tiling
+    elif paddingmode == "repeat":
+        def pad_repeat(Y):
+            d0, I = Y.shape
+            d_nice = np.ceil(d / d0)
+            Y_pad = np.repeat(Y, (int(d_nice / d0), 1))
+            return Y_pad[:d, :]
+        return pad_repeat
+    else:
+        raise Exception("Padding mode not implemented!")
+
+
 # Function to make function
-def make_model_function(parameter):
-    def function_inside(x):
-        print(x * parameter)
+def make_model_function(K, h, W, b, w, mu, paddingmode, d):
+    pad_func = make_padding_function(paddingmode, d)
+
+    def function_inside(Y):
+        Y = pad_func(Y)
+        d, I = Y.shape
+        Z = Y
+
+        for i in range(K):
+            Z = Z + (
+                h * sigma(
+                    (W[:, :, i] @ Z).T + b[:, i]
+                ).T
+            )
+
+        return getUpsilon(Z, w, mu)
     return function_inside
-
-
-f = make_function(3.14)
-
-f(2.71)
 
 
 # Equation 4
@@ -51,8 +85,9 @@ f(2.71)
 # W: d x d x K 3-tensor: colletion of weight matrices
 # b: d x K matrix: list of all b_k offsets
 def getZ(Y, K, h, W, b):
-    d = np.shape(Y)[0]
-    I = np.shape(Y)[1]
+    # d = np.shape(Y)[0]
+    # I = np.shape(Y)[1]
+    d, I = Y.shape
 
     # Zs is a collection of K + 1 matrices
     # Each Z is the k-th set of intermediate values
@@ -316,17 +351,8 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
     # paddingmode = "repeat"
 
     if d0 < d:
-        d_nice = np.ceil(d / d0)
-        if paddingmode == "zeros":
-            Y_pad = np.zeros((d, I))
-            Y_pad[:d0, :] = Y
-            Y = Y_pad
-        elif paddingmode == "tiling":
-            Y_pad = np.tile(Y, (int(d_nice / d0), 1))
-            Y = Y_pad[:d, :]
-        elif paddingmode == "repeat":
-            Y_pad = np.tile(Y, (int(d_nice / d0), 1))
-            Y = Y_pad[:d, :]
+        pad_func = make_padding_function(paddingmode, d)
+        Y = pad_func(Y)
     elif d0 > d:
         raise Exception("Shit went wrong!")
         # TODO: check code for embedding data if the dimensions mismatch
