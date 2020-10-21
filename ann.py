@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 from support import concatflat, reconstruct_flat
 
@@ -42,15 +43,15 @@ def make_padding_function(paddingmode, d):
     elif paddingmode == "tiling":
         def pad_tiling(Y):
             d0, I = Y.shape
-            d_nice = np.ceil(d / d0)
+            d_nice = np.ceil(d / d0) * d0
             Y_pad = np.tile(Y, (int(d_nice / d0), 1))
             return Y_pad[:d, :]
         return pad_tiling
     elif paddingmode == "repeat":
         def pad_repeat(Y):
             d0, I = Y.shape
-            d_nice = np.ceil(d / d0)
-            Y_pad = np.repeat(Y, (int(d_nice / d0), 1))
+            d_nice = np.ceil(d / d0) * d0
+            Y_pad = np.repeat(Y, int(d_nice / d0), axis=0)
             return Y_pad[:d, :]
         return pad_repeat
     else:
@@ -323,7 +324,17 @@ def adamTheta(state, dJ, W, b, w, mu):
 # c: I vector of traning answers
 #
 # TODO: Take padding mode and descent_mode/tau as parameters in some other way
-def trainANN(d, K, h, tau, Y, c, it_max, tol):
+def trainANN(
+        d,
+        K,
+        h,
+        Y,
+        c,
+        it_max,
+        tol,
+        tau=None,
+        descent_mode="gradient",
+        padding_mode="zeros"):
     '''
     d, K, h and tau are model parameters for:
         d: dimension of spaces in hidden layers
@@ -346,16 +357,16 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
 
     d0, I = np.shape(Y)
 
-    # paddingmode = "zeros"
-    paddingmode = "tiling"
-    # paddingmode = "repeat"
-
     if d0 < d:
-        pad_func = make_padding_function(paddingmode, d)
+        pad_func = make_padding_function(padding_mode, d)
         Y = pad_func(Y)
     elif d0 > d:
-        raise Exception("Shit went wrong!")
+        raise Exception(
+            "Dimension of input is larger than" +
+            " dimension of neural net!")
         # TODO: check code for embedding data if the dimensions mismatch
+
+    # print("Y = {}".format(Y))
 
     # Initialization
 
@@ -364,14 +375,13 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
     w = np.random.uniform(size=(d, 1))
     mu = np.random.uniform(size=(1, 1))
 
-    descent_mode = "gradient"
-    descent_mode = "adam"
-
     if descent_mode == "gradient":
+        if tau is None:
+            raise Exception("Must specify tau when using gradient descent!")
         descent_state = tau
         descent_function = updateTheta
     elif descent_mode == "adam":
-        dim = np.sum([np.prod(W.shape), np.prod(b.shape), np.prod(w), 1])
+        dim = np.sum([np.prod(W.shape), np.prod(b.shape), np.prod(w.shape), 1])
         descent_state = setupAdam(dim)
         descent_function = adamTheta
 
@@ -380,6 +390,7 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
     it = 0
     J = np.inf
     Js = []
+    mus = []
 
     while it < it_max and J > tol:
 
@@ -413,3 +424,31 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
         it += 1
 
     return (W, b, w, mu, Js)
+
+
+# TODO: Make better name or something
+
+def train_ANN_and_make_model_function(
+        Y,
+        c,
+        d,
+        K,
+        h,
+        it_max,
+        tol,
+        tau=None,
+        descent_mode="gradient",
+        padding_mode="zeros",
+        activation_function=(sigma, sigPr),
+        hypothesis_function=(eta, etaPr)):
+    # TODO:
+    # - scale input Y
+    # - scale output c
+    # - train network on scaled values
+    # - make model function
+    # - make scaled model function where inputs are scaled by the same
+    # factors as the training input, then the model function is called,
+    # then the output is inversly scaled with the factors used to scale c
+    # - make everything be able to take the activation and hypothesis
+    # functions as parameters
+    pass
