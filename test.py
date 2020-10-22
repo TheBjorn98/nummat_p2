@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # Number of hidden layers: K = 3
     # Stepsize for internal layers: h = 1
 
-    d, I = 4, 10
+    d, I = 2, 10
     K, h = 5, .2
     it_max, tol = 1000, 1e-4
     tau = .5
