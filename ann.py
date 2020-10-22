@@ -202,6 +202,17 @@ def adamTheta(dJ, W, b, w, mu):
     pass
 
 
+def getGradANN(Y, K, h, W, b ,w, mu):
+    Zs = getZ(Y, K, h, W, b)
+    acc = w * etaPr(Zs[:, :, K])  # acc starts as grad(eta(Wk @ ZK + bk))
+
+    for k in range(K, 0, -1):
+        dphi = h * sigPr(Zs[:, :, k - 1])
+        acc = acc + h * (dphi * acc)
+
+    return acc  # acc is now grad_y(F) for (F is ANN)
+
+
 def trainANN(d, K, h, tau, Y, c, it_max, tol):
     '''
     d, K, h and tau are model parameters for:
@@ -267,5 +278,8 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
 
         # Another iteration complete!
         it += 1
+
+        # if J < .1 * Js[0]:
+        #     break
 
     return (W, b, w, mu, Js)
