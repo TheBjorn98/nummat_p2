@@ -27,7 +27,8 @@ def intMeth(p,q,dTdp, dVdq, it_max, tol, func, step):
         diff = (np.linalg.norm(ps[-2] - ps[-1]) + np.linalg.norm(qs[-2] - qs[-1]))/2 #Marcus fiks denne koden, takk
         it += 1
 
-    return ps, qs
+    return np.array(ps), np.array(qs)
+
 
 
 
