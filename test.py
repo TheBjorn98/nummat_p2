@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     d, I = 2, 10
     K, h = 5, .2
-    it_max, tol = 1000, 1e-4
+    it_max, tol = 10000, 1e-4
     tau = .5
 
     # _Y = np.random.uniform(low=-2., high=2., size=(d, I))
