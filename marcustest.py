@@ -15,7 +15,8 @@ def testfunc_1(y):
 
 
 def testfunc_2(y):
-    return 1.0 - np.cos(y) - 2.0
+    return 1.0 - np.cos(y)
+    # return np.sin(y) * y
 
 
 def train_test_func1():
@@ -32,18 +33,18 @@ def train_test_func1():
     h = 0.1
     it_max = 1000
     tol = 1e-4
-    
+
     t = time.time()
-    
+
     (W, b, w, mu, _) = ann.trainANN(d, K, h, Y, c, it_max, tol, tau=tau)
-    
+
     f = ann.make_model_function(K, h, W, b, w, mu, "repeat", d)
-    
+
     testy = np.array([[0.5, 1.0]]).T
-    
+
     print(f(testy))
     print(testfunc_1(testy))
-    
+
     # print("took {} seconds".format(time.time() - t))
 
 
@@ -57,26 +58,37 @@ def train_test_func2():
     # print("Y = {}".format(Y.T))
     # print("c = {}".format(c))
 
-    tau = 0.2
+    tau = 0.1
     d = 2
-    K = 4
+    K = 8
     h = 0.1
     it_max = 10000
     tol = 1e-4
-    
+
     t = time.time()
+
+    (f, Js) = ann.train_ANN_and_make_model_function(
+        Y, c, d, K, h, it_max, tol, tau=tau)
     
-    (W, b, w, mu, _) = ann.trainANN(d, K, h, Y, c, it_max, tol, tau=tau)
+    print(f"took {time.time() - t:.3f} seconds")
     
-    f = ann.make_model_function(K, h, W, b, w, mu, "repeat", d)
-    
+    plt.plot(np.log(Js))
+    # plt.show()
+    plt.savefig("js.png")
+    plt.clf()
+    plt.cla()
+
     n = 100
-    ys = np.reshape(np.linspace(-np.pi / 3, np.pi / 3, n), (1, n))
+    ys = np.linspace(-np.pi / 3, np.pi / 3, n)
     
-    plt.plot(np.squeeze(ys), np.squeeze(f(ys)))
-    plt.plot(np.squeeze(ys), np.squeeze(testfunc_2(ys)))
-    plt.show()
-    
+    cs = f(np.reshape(ys, (1, n)))
+
+    plt.plot(ys, testfunc_2(ys))
+    plt.plot(ys, cs)
+    plt.savefig("func_fit.png")
+    plt.clf()
+    plt.cla()
+
     # print("took {} seconds".format(time.time() - t))
 
 

@@ -59,10 +59,8 @@ def make_padding_function(paddingmode, d):
 
 
 # Function to make function
-def make_model_function(K, h, W, b, w, mu, paddingmode, d):
-    pad_func = make_padding_function(paddingmode, d)
-
-    def function_inside(Y):
+def make_model_function(K, h, W, b, w, mu, pad_func):
+    def model_function(Y):
         Y = pad_func(Y)
         d, I = Y.shape
         Z = Y
@@ -74,8 +72,8 @@ def make_model_function(K, h, W, b, w, mu, paddingmode, d):
                 ).T
             )
 
-        return getUpsilon(Z, w, mu)
-    return function_inside
+        return np.squeeze(getUpsilon(Z, w, mu))
+    return model_function
 
 
 # Equation 4
@@ -333,8 +331,7 @@ def trainANN(
         it_max,
         tol,
         tau=None,
-        descent_mode="gradient",
-        padding_mode="zeros"):
+        descent_mode="gradient"):
     '''
     d, K, h and tau are model parameters for:
         d: dimension of spaces in hidden layers
@@ -357,14 +354,8 @@ def trainANN(
 
     d0, I = np.shape(Y)
 
-    if d0 < d:
-        pad_func = make_padding_function(padding_mode, d)
-        Y = pad_func(Y)
-    elif d0 > d:
-        raise Exception(
-            "Dimension of input is larger than" +
-            " dimension of neural net!")
-        # TODO: check code for embedding data if the dimensions mismatch
+    if d0 != d:
+        raise Exception("Input must be padded")
 
     # print("Y = {}".format(Y))
 
@@ -390,7 +381,6 @@ def trainANN(
     it = 0
     J = np.inf
     Js = []
-    mus = []
 
     while it < it_max and J > tol:
 
@@ -451,4 +441,67 @@ def train_ANN_and_make_model_function(
     # then the output is inversly scaled with the factors used to scale c
     # - make everything be able to take the activation and hypothesis
     # functions as parameters
-    pass
+
+    # Values to scale between
+    alpha, beta = 0.2, 0.8
+
+    # Save the min and max y values for scaling both the training data
+    # and the input of the resulting model function
+    y_min, y_max = np.min(Y), np.max(Y)
+
+    # Scale the training data input
+    Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+
+    # Save the min and max training output data for scaling the training data
+    # and inverse scaling the output of the model function
+    c_min, c_max = np.min(c), np.max(c)
+
+    # Scale the training data output
+    c = 1 / (c_max - c_min) * ((c_max - c) * alpha + (c - c_min) * beta)
+
+    d0, I = Y.shape
+
+    # Set the padding function and pad the input data
+    if d0 < d:
+        pad_func = make_padding_function(padding_mode, d)
+        Y = pad_func(Y)
+    elif d0 > d:
+        raise Exception(
+            "Dimension of input is larger than" +
+            " dimension of neural net!")
+    else:
+        def identity(y):
+            return y
+        pad_func = identity
+
+    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c,
+                                 it_max, tol, tau=tau, descent_mode=descent_mode)
+    
+    modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
+    
+    def scaled_modfunc(Y):
+        # The padding functions do not like getting one dimensional input
+        # but we want to be able to use our model function as a function
+        # of a single vector, or a whole matrix of vector, so in case it's
+        # a vector, it is simply reshaped to a matrix with a single column
+        # or in the very special case its a single number, it is reshaped
+        # to a 1x1 matrix
+        if type(Y) == float:
+            Y = np.reshape(Y, (1, 1))
+        elif len(Y.shape) == 1:
+            Y = np.reshape(Y, (len(Y), 1))
+        
+        # Scale the input
+        Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+        
+        # Compute the scaled output
+        c = modfunc(Y)
+        
+        # Apply the inverse scaling to the output
+        c = 1 / (beta - alpha) * ((beta - c) * c_min + (c - alpha) * c_max)
+        
+        return c
+    
+    # Return the scaled model function and the evolution of the
+    # objective function for analisys
+    return (scaled_modfunc, Js)
