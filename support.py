@@ -25,6 +25,24 @@ def getRandomInput(a, b, ld, hd):
     return np.array(ys)
 
 
+def concatflat(tup):
+    return np.concatenate([np.array(x).flatten() for x in tup])
+
+
+def reconstruct_flat(shapes, flat):
+    reconstructed = []
+    i = 0
+    for shape in shapes:
+        if shape == ():
+            reconstructed.append(flat[i])
+            i += 1
+        else:
+            size = np.prod(shape)
+            reconstructed.append(np.reshape(flat[i:i + size], shape))
+            i += size
+    return reconstructed
+
+
 if __name__ == "__main__":
 
     def _test_scaleInput():

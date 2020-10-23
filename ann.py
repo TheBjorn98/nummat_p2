@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+from support import concatflat, reconstruct_flat
 
 # Script defining the necessary functions for the ANN
 
@@ -29,9 +32,61 @@ def etaPr(x):
     return .25 * (1 - np.tanh(x / 2)**2)
 
 
+def make_padding_function(paddingmode, d):
+    if paddingmode == "zeros":
+        def pad_zero(Y):
+            d0, I = Y.shape
+            Y_pad = np.zeros((d, I))
+            Y_pad[:d0, :] = Y
+            return Y_pad
+        return pad_zero
+    elif paddingmode == "tiling":
+        def pad_tiling(Y):
+            d0, I = Y.shape
+            d_nice = np.ceil(d / d0) * d0
+            Y_pad = np.tile(Y, (int(d_nice / d0), 1))
+            return Y_pad[:d, :]
+        return pad_tiling
+    elif paddingmode == "repeat":
+        def pad_repeat(Y):
+            d0, I = Y.shape
+            d_nice = np.ceil(d / d0) * d0
+            Y_pad = np.repeat(Y, int(d_nice / d0), axis=0)
+            return Y_pad[:d, :]
+        return pad_repeat
+    else:
+        raise Exception("Padding mode not implemented!")
+
+
+# Function to make function
+def make_model_function(K, h, W, b, w, mu, pad_func):
+    def model_function(Y):
+        Y = pad_func(Y)
+        d, I = Y.shape
+        Z = Y
+
+        for i in range(K):
+            Z = Z + (
+                h * sigma(
+                    (W[:, :, i] @ Z).T + b[:, i]
+                ).T
+            )
+
+        return np.squeeze(getUpsilon(Z, w, mu))
+    return model_function
+
+
+# Equation 4
+# Returns all the hidden layer node values for I input vectors
+# Y: d x I matrix of I input vectors
+# K: Integer number of hidden layers
+# h: stepsize
+# W: d x d x K 3-tensor: colletion of weight matrices
+# b: d x K matrix: list of all b_k offsets
 def getZ(Y, K, h, W, b):
-    d = np.shape(Y)[0]
-    I = np.shape(Y)[1]
+    # d = np.shape(Y)[0]
+    # I = np.shape(Y)[1]
+    d, I = Y.shape
 
     # Zs is a collection of K + 1 matrices
     # Each Z is the k-th set of intermediate values
@@ -39,13 +94,14 @@ def getZ(Y, K, h, W, b):
 
     Zs[:, :, 0] = Y
 
-    for i in range(1, K + 1):
+    for i in range(K):
         # TODO: Consider fixing indices so that transpose are no longer
         # necessary
-        Zs[:, :, i] = (
-            Zs[:, :, i - 1] + (
+        # or TODO: Explain transpose shit
+        Zs[:, :, i + 1] = (
+            Zs[:, :, i] + (
                 h * sigma(
-                    (W[:, :, i - 1] @ Zs[:, :, i - 1]).T + b[:, i - 1]
+                    (W[:, :, i] @ Zs[:, :, i]).T + b[:, i]
                 ).T
             )
         )
@@ -53,10 +109,16 @@ def getZ(Y, K, h, W, b):
     return Zs
 
 
+# Equation 5
+# Returns d x I matrix of all the I Upsilon vectors
+# ZK: d x I matrix of last layer Z
+# mu: offset scalar
 def getUpsilon(ZK, w, mu):
     return eta((ZK.T @ w) + mu)
 
 
+# Equation 10
+# Yc = (Upsilon - c)
 def getPK(Yc, ZK, w, mu):
 
     I = np.shape(ZK)[1]
@@ -83,6 +145,7 @@ def getPK(Yc, ZK, w, mu):
     )
 
 
+# Equation 11
 def getP(PK, Zs, h, K, W, b):
 
     d = np.shape(PK)[0]
@@ -122,12 +185,19 @@ def getP(PK, Zs, h, K, W, b):
     return Ps
 
 
+# Upsilon: I dim vector
+# c: I vector of fasit
 def getYc(Upsilon, c):
     return (Upsilon.T - c).T
+
+# the non transpose of the non (Upsilon - c) part of equation 8
+# This showed up a lot and was useful to have as a function
 
 
 def getNu(ZK, w, mu):
     return etaPr(ZK.T @ w + mu)
+
+# Common part between equation 12 and 13
 
 
 def getHk(Ps, Zs, K, h, W, b):
@@ -136,7 +206,7 @@ def getHk(Ps, Zs, K, h, W, b):
     I = np.shape(Ps)[1]
     Hs = np.zeros((d, I, K))
 
-    for i in range(K-1):
+    for i in range(K - 1):
 
         # TODO: recondense this expansion
 
@@ -157,6 +227,15 @@ def getHk(Ps, Zs, K, h, W, b):
     return Hs
 
 
+# Ups: d x I matrix of approx results
+# c: I vector of exact results
+# Ps: d x I x K tensor of all the "propagator values"
+# Zs: d x I (K + 1) tensor of all the hidden layer node values
+# h: step size
+# W: d x d x K tensor of weights
+# b: d x K matrix of offsets
+# w: d vector of output weights
+# mu: offset scalar
 def getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu):
 
     d = np.shape(Ps)[0]
@@ -174,7 +253,7 @@ def getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu):
     dJdbk = np.zeros((d, K))
     for i in range(K):
         dJdWk[:, :, i] = Hs[:, :, i] @ Zs[:, :, i].T
-        dJdbk[:, i] = Hs[:, :, i] @ np.ones((I))
+        dJdbk[:, i] = Hs[:, :, i] @ np.ones(I)
 
     # print("Hs:\n{}".format(Hs))
     # print("Zs:\n{}".format(Zs))
@@ -183,9 +262,19 @@ def getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu):
     # print("Hk: {}".format(np.shape(Hs[:, :, 0])))
     # dJdbk = np.array([ for i in range(K)])
 
+    # dJdWk: d x d x K tensor of allllll the derivatives
+    # dJdbk: d x K matrix of all the derivatives
+    # dJdw: d vec of all derivatives
+    # dJdmu: scalar derivative
     return (dJdWk, dJdbk, dJdw, dJdmu)
 
 
+# tau: scalar learing factor (gradient decent step size)
+# dJ: (3 dim, 2 dim, 1 dim, 0 dim) 4 tuple of derivatives
+# W: hidden weights
+# b: hidden offsets
+# w: output weights
+# mu: output offset
 def updateTheta(tau, dJ, W, b, w, mu):
 
     Wn = W - tau * dJ[0]
@@ -193,19 +282,60 @@ def updateTheta(tau, dJ, W, b, w, mu):
     wn = w - tau * dJ[2]
     mun = mu - tau * dJ[3]
 
-    return (Wn, bn, wn, mun)
+    return (tau, Wn, bn, wn, mun)
+
+
+def setupAdam(dim):
+    v = np.zeros(dim)
+    m = np.zeros(dim)
+    return (v, m, 1)
 
 
 # TODO: find a concise way to construct theta from W, b, w and mu
 # and recover these from theta
-def adamTheta(dJ, W, b, w, mu):
-    pass
+def adamTheta(state, dJ, W, b, w, mu):
+    beta1 = 0.9
+    beta2 = 0.999
+    alpha = 0.01
+    epsilon = 1e-8
+    #
+    v, m, i = state
+    #
+    shapes = [W.shape, b.shape, w.shape, np.array(mu).shape]
+    theta = concatflat((W, b, w, mu))
+    g = concatflat(dJ)
+    m = beta1 * m + (1 - beta1) * g
+    v = beta2 * v + (1 - beta2) * (g * g)
+    m_hat = m / (1 - beta1**i)
+    v_hat = v / (1 - beta2**i)
+    theta = theta + alpha * m_hat / (np.sqrt(v_hat) + epsilon)
+    #
+    W, b, w, mu = reconstruct_flat(shapes, theta)
+    return ((v, m, i + 1), W, b, w, mu)
 
 
-def trainANN(d, K, h, tau, Y, c, it_max, tol):
+# d: height of hidden layers
+# K: amount of hidden layers
+# h: stepsize
+# tau: learining factor
+# Y: d x I matrix of training input data
+# c: I vector of traning answers
+#
+# TODO: Take padding mode and descent_mode/tau as parameters in some other way
+def trainANN(
+        d,
+        K,
+        h,
+        Y,
+        c,
+        it_max,
+        tol,
+        tau=None,
+        descent_mode="gradient"):
     '''
     d, K, h and tau are model parameters for:
         d: dimension of spaces in hidden layers
+
         K: number of hidden layers in the ResNet model
         h: stepsize for emphazising internal layers in the model
         tau: learning parameter declaring how much of the gradient is included
@@ -220,11 +350,14 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
 
     # TODO: implement more sophisticated tolerance criterion
 
+    # Padding the input data
+
     d0, I = np.shape(Y)
 
-    if d0 < d:
-        pass
-        # TODO: code for embedding data if the dimensions mismatch
+    if d0 != d:
+        raise Exception("Input must be padded")
+
+    # print("Y = {}".format(Y))
 
     # Initialization
 
@@ -232,6 +365,16 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
     b = np.random.uniform(size=(d, K))
     w = np.random.uniform(size=(d, 1))
     mu = np.random.uniform(size=(1, 1))
+
+    if descent_mode == "gradient":
+        if tau is None:
+            raise Exception("Must specify tau when using gradient descent!")
+        descent_state = tau
+        descent_function = updateTheta
+    elif descent_mode == "adam":
+        dim = np.sum([np.prod(W.shape), np.prod(b.shape), np.prod(w.shape), 1])
+        descent_state = setupAdam(dim)
+        descent_function = adamTheta
 
     # Iteration
 
@@ -263,9 +406,102 @@ def trainANN(d, K, h, tau, Y, c, it_max, tol):
 
         # Updating the weights and activations in the model
         # Update-scheme followinmg from details in the project
-        W, b, w, mu = updateTheta(.2, dJ, W, b, w, mu)
+        # W, b, w, mu = updateTheta(.2, dJ, W, b, w, mu)
+        (descent_state, W, b, w, mu) = descent_function(
+            descent_state, dJ, W, b, w, mu)
 
         # Another iteration complete!
         it += 1
 
     return (W, b, w, mu, Js)
+
+
+# TODO: Make better name or something
+
+def train_ANN_and_make_model_function(
+        Y,
+        c,
+        d,
+        K,
+        h,
+        it_max,
+        tol,
+        tau=None,
+        descent_mode="gradient",
+        padding_mode="zeros",
+        activation_function=(sigma, sigPr),
+        hypothesis_function=(eta, etaPr)):
+    # TODO:
+    # - scale input Y
+    # - scale output c
+    # - train network on scaled values
+    # - make model function
+    # - make scaled model function where inputs are scaled by the same
+    # factors as the training input, then the model function is called,
+    # then the output is inversly scaled with the factors used to scale c
+    # - make everything be able to take the activation and hypothesis
+    # functions as parameters
+
+    # Values to scale between
+    alpha, beta = 0.2, 0.8
+
+    # Save the min and max y values for scaling both the training data
+    # and the input of the resulting model function
+    y_min, y_max = np.min(Y), np.max(Y)
+
+    # Scale the training data input
+    Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+
+    # Save the min and max training output data for scaling the training data
+    # and inverse scaling the output of the model function
+    c_min, c_max = np.min(c), np.max(c)
+
+    # Scale the training data output
+    c = 1 / (c_max - c_min) * ((c_max - c) * alpha + (c - c_min) * beta)
+
+    d0, I = Y.shape
+
+    # Set the padding function and pad the input data
+    if d0 < d:
+        pad_func = make_padding_function(padding_mode, d)
+        Y = pad_func(Y)
+    elif d0 > d:
+        raise Exception(
+            "Dimension of input is larger than" +
+            " dimension of neural net!")
+    else:
+        def identity(y):
+            return y
+        pad_func = identity
+
+    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c,
+                                 it_max, tol, tau=tau, descent_mode=descent_mode)
+    
+    modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
+    
+    def scaled_modfunc(Y):
+        # The padding functions do not like getting one dimensional input
+        # but we want to be able to use our model function as a function
+        # of a single vector, or a whole matrix of vector, so in case it's
+        # a vector, it is simply reshaped to a matrix with a single column
+        # or in the very special case its a single number, it is reshaped
+        # to a 1x1 matrix
+        if type(Y) == float:
+            Y = np.reshape(Y, (1, 1))
+        elif len(Y.shape) == 1:
+            Y = np.reshape(Y, (len(Y), 1))
+        
+        # Scale the input
+        Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+        
+        # Compute the scaled output
+        c = modfunc(Y)
+        
+        # Apply the inverse scaling to the output
+        c = 1 / (beta - alpha) * ((beta - c) * c_min + (c - alpha) * c_max)
+        
+        return c
+    
+    # Return the scaled model function and the evolution of the
+    # objective function for analisys
+    return (scaled_modfunc, Js)
