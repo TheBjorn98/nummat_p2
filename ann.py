@@ -314,6 +314,17 @@ def adamTheta(state, dJ, W, b, w, mu):
     return ((v, m, i + 1), W, b, w, mu)
 
 
+def getGradANN(Y, K, h, W, b, w, mu):
+    Zs = getZ(Y, K, h, W, b)
+    acc = w * etaPr(Zs[:, :, K])  # acc starts as grad(eta(Wk @ ZK + bk))
+
+    for k in range(K, 0, -1):
+        dphi = h * sigPr(Zs[:, :, k - 1])
+        acc = acc + h * (dphi * acc)
+
+    return acc  # acc is now grad_y(F) for (F is ANN)
+
+
 # d: height of hidden layers
 # K: amount of hidden layers
 # h: stepsize
@@ -476,9 +487,9 @@ def train_ANN_and_make_model_function(
 
     (W, b, w, mu, Js) = trainANN(d, K, h, Y, c,
                                  it_max, tol, tau=tau, descent_mode=descent_mode)
-    
+
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
-    
+
     def scaled_modfunc(Y):
         # The padding functions do not like getting one dimensional input
         # but we want to be able to use our model function as a function
@@ -486,22 +497,47 @@ def train_ANN_and_make_model_function(
         # a vector, it is simply reshaped to a matrix with a single column
         # or in the very special case its a single number, it is reshaped
         # to a 1x1 matrix
-        if type(Y) == float:
+        if isinstance(Y, float):
+            Y = np.reshape(Y, (1, 1))
+        elif len(Y.shape) == 1:
+            Y = np.reshape(Y, (len(Y), 1))
+
+        # Scale the input
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+
+        # Compute the scaled output
+        c_scaled = modfunc(Y_scaled)
+
+        # Apply the inverse scaling to the output
+        c = 1 / (beta - alpha) * ((beta - c_scaled)
+                                  * c_min + (c_scaled - alpha) * c_max)
+
+        return c
+
+    def gradient_modfunc(Y):
+        # The padding functions do not like getting one dimensional input
+        # but we want to be able to use our model function as a function
+        # of a single vector, or a whole matrix of vector, so in case it's
+        # a vector, it is simply reshaped to a matrix with a single column
+        # or in the very special case its a single number, it is reshaped
+        # to a 1x1 matrix
+        if isinstance(Y, float):
             Y = np.reshape(Y, (1, 1))
         elif len(Y.shape) == 1:
             Y = np.reshape(Y, (len(Y), 1))
         
-        # Scale the input
-        Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+        Y = pad_func(Y)
+
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+
+        # gradent of the scaled c with respect to the scaled input Y
+        dc_scaled_scaled = getGradANN(Y_scaled, K, h, W, b, w, mu)
         
-        # Compute the scaled output
-        c = modfunc(Y)
-        
-        # Apply the inverse scaling to the output
-        c = 1 / (beta - alpha) * ((beta - c) * c_min + (c - alpha) * c_max)
-        
-        return c
-    
+        # gradient of the scaled c with respect to the unscaled input Y
+        dc = dc_scaled_scaled * (c_max - c_min) / (y_max - y_min)
+
+        return dc
+
     # Return the scaled model function and the evolution of the
     # objective function for analisys
-    return (scaled_modfunc, Js)
+    return (scaled_modfunc, gradient_modfunc, Js)

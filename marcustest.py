@@ -15,8 +15,15 @@ def testfunc_1(y):
 
 
 def testfunc_2(y):
-    return 1.0 - np.cos(y)
+    # return 1.0 - np.cos(y)
+    # return y**3 - y
+    return y**4 - y**2
     # return np.sin(y) * y
+
+
+# def d_testfunc_2(y):
+#     # return np.sin(y)
+#     # return 3 * y**2
 
 
 def train_test_func1():
@@ -50,7 +57,8 @@ def train_test_func1():
 
 def train_test_func2():
     I = 100
-    Y = make_uniform_inp_box([-np.pi / 3], [np.pi / 3], I)
+    # Y = make_uniform_inp_box([-np.pi / 3], [np.pi / 3], I)
+    Y = np.reshape(np.linspace(-np.pi / 3, np.pi / 3, I), (1, I))
     # print(Y)
     c = np.squeeze(np.array([testfunc_2(Y[:, i]) for i in range(I)]))
     # print(c)
@@ -58,21 +66,21 @@ def train_test_func2():
     # print("Y = {}".format(Y.T))
     # print("c = {}".format(c))
 
-    tau = 0.1
-    d = 2
-    K = 8
+    tau = 0.01
+    d = 4
+    K = 6
     h = 0.1
-    it_max = 10000
+    it_max = 100000
     tol = 1e-4
 
     t = time.time()
 
-    (f, Js) = ann.train_ANN_and_make_model_function(
-        Y, c, d, K, h, it_max, tol, tau=tau)
+    (f, df, Js) = ann.train_ANN_and_make_model_function(
+        Y, c, d, K, h, it_max, tol, tau=tau, padding_mode="repeat")
     
     print(f"took {time.time() - t:.3f} seconds")
     
-    plt.plot(np.log(Js))
+    plt.plot(np.log10(Js))
     # plt.show()
     plt.savefig("js.png")
     plt.clf()
@@ -88,6 +96,14 @@ def train_test_func2():
     plt.savefig("func_fit.png")
     plt.clf()
     plt.cla()
+    
+    # dcs = df(np.reshape(ys, (1, n)))[0, :]
+    
+    # plt.plot(ys, d_testfunc_2(ys))
+    # plt.plot(ys, dcs)
+    # plt.savefig("d_func_fit.png")
+    # plt.clf()
+    # plt.cla()
 
     # print("took {} seconds".format(time.time() - t))
 
