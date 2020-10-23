@@ -16,11 +16,13 @@ if __name__ == "__main__":
     # Stepsize for internal layers: h = 1
 
     d, I = 2, 10
-    K, h = 3, 1
-    it_max, tol = 1000, 1e-4
-    tau = .2
+    K, h = 5, .2
+    it_max, tol = 10000, 1e-4
+    tau = .5
 
-    _Y = np.random.uniform(low=-2., high=2., size=(d, I))
+    # _Y = np.random.uniform(low=-2., high=2., size=(d, I))
+    # _Y = np.sort(_Y)
+    _Y = np.array([np.linspace(-1, 1, num=I), np.ones(I)])
     Y = support.scaleInput(_Y, .2, .8)
     # TODO: fix the test function so it does this automagically
     c = np.array([F(y) for y in Y.T])
@@ -34,10 +36,26 @@ if __name__ == "__main__":
 
         Z_fin = ann.getZ(Y, K, h, W, b)
         Ups = ann.getUpsilon(Z_fin[:, :, -1], w, mu)
-        print("Analytical: \n{}".format(c))
-        print("{} updates: \n{}".format(it_max, Ups))
+        # print("Analytical: \n{}".format(c))
+        # print("{} updates: \n{}".format(it_max, Ups))
         plt.plot(Js)
         plt.show()
+        plt.plot(c)
+        plt.plot(Ups)
+        plt.show()
+
+        '''
+        grad = ann.getGradANN(Y, K, h, W, b, w, mu)
+        # print(Y)
+        # print(grad)
+        print((Y - grad) / Y * 100)
+        for y in Y:
+            plt.plot(np.sort(y))
+        for g in grad:
+            plt.plot(np.sort(g))
+
+        plt.show()
+        '''
 
     if testType == "fixWs":
 

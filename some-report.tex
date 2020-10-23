@@ -1,0 +1,30 @@
+\section{Gradient of the ResNet model}
+
+% series of transformations phi
+% then the hypothesis function
+% provide proofs for the grad and D's?
+
+The ResNet model is a series of transformation \(\phi_k: \mathbb{R}^{d} \rightarrow \mathbb{R}^{d}\)
+with a final transformation \(\eta: \mathbb{R}^{d} \rightarrow \mathbb{R}\).
+To find the gradient of the model with respect to the input data \(y\),
+it is necessary to differentiate the model by applying the chain rule to the composition which completely describes the model:
+
+\begin{gather*}
+    \tilde{F}(y) = \eta \circ \phi_{K} \circ \phi_{K-1} \dots \phi_{2} \circ \phi_1 (y)
+\end{gather*}
+
+This composition assumes that the input vector $y$ has the dimension $d$.
+If $y$ originally had a dimension $d_0 < d$, then this problem can be resolved by embedding $y$ in $\mathbb{R}^{d}$
+by means of some padding routine.
+
+% TODO: will we actually look at different padding routines?
+In this project we will look at some different methods of padding, namely:
+
+\begin{enumerate}
+    \item Expanding $y$ by appending zeros
+    \item Repeating $y$ along one axis as to supply additional copies of the vector
+    \item Stretch the vector by means of repeating each coordinate instead of the entire vector
+\end{enumerate}
+
+This emphasis on padding routines is merely by curosity, who knows what neural nets do!
+

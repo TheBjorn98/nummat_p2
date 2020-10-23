@@ -415,6 +415,15 @@ def trainANN(
 
     return (W, b, w, mu, Js)
 
+def getGradANN(Y, K, h, W, b ,w, mu):
+    Zs = getZ(Y, K, h, W, b)
+    acc = w * etaPr(Zs[:, :, K])  # acc starts as grad(eta(Wk @ ZK + bk))
+
+    for k in range(K, 0, -1):
+        dphi = h * sigPr(Zs[:, :, k - 1])
+        acc = acc + h * (dphi * acc)
+
+    return acc  # acc is now grad_y(F) for (F is ANN)
 
 # TODO: Make better name or something
 
