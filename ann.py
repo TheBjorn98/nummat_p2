@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from support import concatflat, reconstruct_flat
 
@@ -121,7 +120,7 @@ def getUpsilon(ZK, w, mu):
 # Yc = (Upsilon - c)
 def getPK(Yc, ZK, w, mu):
 
-    I = np.shape(ZK)[1]
+    # I = np.shape(ZK)[1]
 
     # t1 = ((ZK.T @ w).T + mu).T
     # t2 = etaPr(t1)
@@ -159,7 +158,8 @@ def getP(PK, Zs, h, K, W, b):
         # Ps[:, :, i] = (
         #     Ps[:, :, i + 1] + (
         #         h * W[:, :, i].T @ (
-        #             sigPr(W[:, :, i] @ Zs[:, :, i] + b[:, i]) * Ps[:, :, i + 1]
+        #             sigPr(W[:, :, i] @ Zs[:, :, i] + b[:, i])
+        #               * Ps[:, :, i + 1]
         #         )
         #     )
         # )
@@ -215,7 +215,8 @@ def getHk(Ps, Zs, K, h, W, b):
         tmp3 = sigPr(tmp2)
         tmp4 = Ps[:, :, i + 1] * tmp3
         Hs[:, :, i] = h * tmp4
-        # Hs[:, :, i] = h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
+        # Hs[:, :, i] =
+        #   h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
 
         # print("Creating Hs[:, :, {}]:".format(i))
         # print("\nW @ Zk:\n{}".format(tmp1))
@@ -316,11 +317,12 @@ def adamTheta(state, dJ, W, b, w, mu):
 
 def getGradANN(Y, K, h, W, b, w, mu):
     Zs = getZ(Y, K, h, W, b)
-    acc = w * (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T  # acc starts as grad(eta(ZK.T @ w + mu))
+    acc = w * (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T
+    # acc starts as grad(eta(ZK.T @ w + mu))
 
     for k in range(K, 0, -1):
-        dphi = h * sigPr(((W[:, :, k-1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
-        acc = acc + (W[:, :, k-1].T @ (dphi * acc))
+        dphi = h * sigPr(((W[:, :, k - 1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
+        acc = acc + (W[:, :, k - 1].T @ (dphi * acc))
 
     return acc  # acc is now grad_y(F) for (F is ANN)
 
@@ -483,15 +485,16 @@ def train_ANN_and_make_model_function(
         Y = pad_func(Y)
     elif d0 > d:
         raise Exception(
-            "Dimension of input is larger than" +
-            " dimension of neural net!")
+            "Dimension of input is larger than"
+            + " dimension of neural net!")
     else:
         def identity(y):
             return y
         pad_func = identity
 
     (W, b, w, mu, Js) = trainANN(d, K, h, Y, c,
-                                 it_max, tol, tau=tau, descent_mode=descent_mode, log=log)
+                                 it_max, tol, tau=tau,
+                                 descent_mode=descent_mode, log=log)
 
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
 
@@ -530,17 +533,17 @@ def train_ANN_and_make_model_function(
             Y = np.reshape(Y, (1, 1))
         elif len(Y.shape) == 1:
             Y = np.reshape(Y, (len(Y), 1))
-        
+
         Y = pad_func(Y)
 
         Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
 
         # gradent of the scaled c with respect to the scaled input Y
         dc_scaled_scaled = getGradANN(Y_scaled, K, h, W, b, w, mu)
-        
+
         # gradient of the scaled c with respect to the unscaled input Y
         scale_factor = (c_max - c_min) / (y_max - y_min)
-        dc = dc_scaled_scaled #* scale_factor
+        dc = dc_scaled_scaled  # * scale_factor
         print(f"Scaling with: {scale_factor:.5f}")
 
         return dc

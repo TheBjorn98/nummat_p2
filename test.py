@@ -1,6 +1,5 @@
 import ann
 import numpy as np
-import support
 import matplotlib.pyplot as plt
 import time
 
@@ -12,6 +11,7 @@ def testfunc_2(y):
     return 1.0 - np.cos(y)
     # return np.sin(y) * y
     # return y**2 / 2
+
 
 def dtestfunc_2(y):
     return np.sin(y)
@@ -43,9 +43,9 @@ if __name__ == "__main__":
 
     (f, df, Js) = ann.train_ANN_and_make_model_function(
         Y, c, d, K, h, it_max, tol, tau=tau, padding_mode="repeat", log=False)
-    
+
     print(f"Took {time.time() - t:.3f} seconds, {len(Js)} iterations")
-    
+
     n = 100
     ys = np.linspace(-np.pi / 3, np.pi / 3, n)
     # ys = np.reshape(np.linspace(-np.pi / 3, np.pi / 3, n), (1, n))
@@ -59,7 +59,6 @@ if __name__ == "__main__":
         plt.plot(ys, testfunc_2(ys))
         plt.plot(ys, cs)
         plt.show()
-
 
     if plotGrad:
         dcs = df(np.reshape(ys, (1, n)))[0, :]
@@ -79,6 +78,3 @@ if __name__ == "__main__":
     # plt.plot(ys, grad_exact)
     # plt.plot(ys, grad_ann)
     # plt.show()
-
-
-    
