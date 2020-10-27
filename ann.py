@@ -314,6 +314,17 @@ def adamTheta(state, dJ, W, b, w, mu):
     return ((v, m, i + 1), W, b, w, mu)
 
 
+def getGradANN(Y, K, h, W, b, w, mu):
+    Zs = getZ(Y, K, h, W, b)
+    acc = w * (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T  # acc starts as grad(eta(ZK.T @ w + mu))
+
+    for k in range(K, 0, -1):
+        dphi = h * sigPr(((W[:, :, k-1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
+        acc = acc + (W[:, :, k-1].T @ (dphi * acc))
+
+    return acc  # acc is now grad_y(F) for (F is ANN)
+
+
 # d: height of hidden layers
 # K: amount of hidden layers
 # h: stepsize
@@ -331,7 +342,8 @@ def trainANN(
         it_max,
         tol,
         tau=None,
-        descent_mode="gradient"):
+        descent_mode="gradient",
+        log=False):
     '''
     d, K, h and tau are model parameters for:
         d: dimension of spaces in hidden layers
@@ -413,17 +425,11 @@ def trainANN(
         # Another iteration complete!
         it += 1
 
+        if log:
+            print(f"{it} / {it_max}, order of error: {np.log(J):.3f}")
+
     return (W, b, w, mu, Js)
 
-def getGradANN(Y, K, h, W, b ,w, mu):
-    Zs = getZ(Y, K, h, W, b)
-    acc = w * etaPr(Zs[:, :, K])  # acc starts as grad(eta(Wk @ ZK + bk))
-
-    for k in range(K, 0, -1):
-        dphi = h * sigPr(Zs[:, :, k - 1])
-        acc = acc + h * (dphi * acc)
-
-    return acc  # acc is now grad_y(F) for (F is ANN)
 
 # TODO: Make better name or something
 
@@ -439,7 +445,8 @@ def train_ANN_and_make_model_function(
         descent_mode="gradient",
         padding_mode="zeros",
         activation_function=(sigma, sigPr),
-        hypothesis_function=(eta, etaPr)):
+        hypothesis_function=(eta, etaPr),
+        log=False):
     # TODO:
     # - scale input Y
     # - scale output c
@@ -484,10 +491,10 @@ def train_ANN_and_make_model_function(
         pad_func = identity
 
     (W, b, w, mu, Js) = trainANN(d, K, h, Y, c,
-                                 it_max, tol, tau=tau, descent_mode=descent_mode)
-    
+                                 it_max, tol, tau=tau, descent_mode=descent_mode, log=log)
+
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
-    
+
     def scaled_modfunc(Y):
         # The padding functions do not like getting one dimensional input
         # but we want to be able to use our model function as a function
@@ -495,22 +502,49 @@ def train_ANN_and_make_model_function(
         # a vector, it is simply reshaped to a matrix with a single column
         # or in the very special case its a single number, it is reshaped
         # to a 1x1 matrix
-        if type(Y) == float:
+        if isinstance(Y, float):
+            Y = np.reshape(Y, (1, 1))
+        elif len(Y.shape) == 1:
+            Y = np.reshape(Y, (len(Y), 1))
+
+        # Scale the input
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+
+        # Compute the scaled output
+        c_scaled = modfunc(Y_scaled)
+
+        # Apply the inverse scaling to the output
+        c = 1 / (beta - alpha) * ((beta - c_scaled)
+                                  * c_min + (c_scaled - alpha) * c_max)
+
+        return c
+
+    def gradient_modfunc(Y):
+        # The padding functions do not like getting one dimensional input
+        # but we want to be able to use our model function as a function
+        # of a single vector, or a whole matrix of vector, so in case it's
+        # a vector, it is simply reshaped to a matrix with a single column
+        # or in the very special case its a single number, it is reshaped
+        # to a 1x1 matrix
+        if isinstance(Y, float):
             Y = np.reshape(Y, (1, 1))
         elif len(Y.shape) == 1:
             Y = np.reshape(Y, (len(Y), 1))
         
-        # Scale the input
-        Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+        Y = pad_func(Y)
+
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+
+        # gradent of the scaled c with respect to the scaled input Y
+        dc_scaled_scaled = getGradANN(Y_scaled, K, h, W, b, w, mu)
         
-        # Compute the scaled output
-        c = modfunc(Y)
-        
-        # Apply the inverse scaling to the output
-        c = 1 / (beta - alpha) * ((beta - c) * c_min + (c - alpha) * c_max)
-        
-        return c
-    
+        # gradient of the scaled c with respect to the unscaled input Y
+        scale_factor = (c_max - c_min) / (y_max - y_min)
+        dc = dc_scaled_scaled #* scale_factor
+        print(f"Scaling with: {scale_factor:.5f}")
+
+        return dc
+
     # Return the scaled model function and the evolution of the
     # objective function for analisys
-    return (scaled_modfunc, Js)
+    return (scaled_modfunc, gradient_modfunc, Js)
