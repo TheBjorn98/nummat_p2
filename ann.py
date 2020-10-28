@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+from time import time
 
 from support import concatflat, reconstruct_flat
 
@@ -120,7 +123,7 @@ def getUpsilon(ZK, w, mu):
 # Yc = (Upsilon - c)
 def getPK(Yc, ZK, w, mu):
 
-    # I = np.shape(ZK)[1]
+    I = np.shape(ZK)[1]
 
     # t1 = ((ZK.T @ w).T + mu).T
     # t2 = etaPr(t1)
@@ -158,8 +161,7 @@ def getP(PK, Zs, h, K, W, b):
         # Ps[:, :, i] = (
         #     Ps[:, :, i + 1] + (
         #         h * W[:, :, i].T @ (
-        #             sigPr(W[:, :, i] @ Zs[:, :, i] + b[:, i])
-        #               * Ps[:, :, i + 1]
+        #             sigPr(W[:, :, i] @ Zs[:, :, i] + b[:, i]) * Ps[:, :, i + 1]
         #         )
         #     )
         # )
@@ -215,8 +217,7 @@ def getHk(Ps, Zs, K, h, W, b):
         tmp3 = sigPr(tmp2)
         tmp4 = Ps[:, :, i + 1] * tmp3
         Hs[:, :, i] = h * tmp4
-        # Hs[:, :, i] =
-        #   h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
+        # Hs[:, :, i] = h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
 
         # print("Creating Hs[:, :, {}]:".format(i))
         # print("\nW @ Zk:\n{}".format(tmp1))
@@ -317,11 +318,12 @@ def adamTheta(state, dJ, W, b, w, mu):
 
 def getGradANN(Y, K, h, W, b, w, mu):
     Zs = getZ(Y, K, h, W, b)
-    acc = w * (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T
     # acc starts as grad(eta(ZK.T @ w + mu))
+    acc = w * (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T
 
     for k in range(K, 0, -1):
-        dphi = h * sigPr(((W[:, :, k - 1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
+        dphi = h * \
+            sigPr(((W[:, :, k - 1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
         acc = acc + (W[:, :, k - 1].T @ (dphi * acc))
 
     return acc  # acc is now grad_y(F) for (F is ANN)
@@ -380,6 +382,11 @@ def trainANN(
     w = np.random.uniform(size=(d, 1))
     mu = np.random.uniform(size=(1, 1))
 
+    # W = np.ones((d, d, K)) * 0.5
+    # b = np.ones((d, K)) * 0.5
+    # w = np.ones((d, 1)) * 0.5
+    # mu = np.ones((1, 1)) * 0.5
+
     if descent_mode == "gradient":
         if tau is None:
             raise Exception("Must specify tau when using gradient descent!")
@@ -395,6 +402,8 @@ def trainANN(
     it = 0
     J = np.inf
     Js = []
+
+    t = time()
 
     while it < it_max and J > tol:
 
@@ -427,8 +436,9 @@ def trainANN(
         # Another iteration complete!
         it += 1
 
-        if log:
-            print(f"{it} / {it_max}, order of error: {np.log(J):.3f}")
+        if log and (time() - t) > 1:
+            t += 1
+            print(f"{it} / {it_max}, order of error: {np.log10(J):.3f}")
 
     return (W, b, w, mu, Js)
 
@@ -485,16 +495,15 @@ def train_ANN_and_make_model_function(
         Y = pad_func(Y)
     elif d0 > d:
         raise Exception(
-            "Dimension of input is larger than"
-            + " dimension of neural net!")
+            "Dimension of input is larger than" +
+            " dimension of neural net!")
     else:
         def identity(y):
             return y
         pad_func = identity
 
-    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c,
-                                 it_max, tol, tau=tau,
-                                 descent_mode=descent_mode, log=log)
+    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c, it_max,
+                                 tol, tau=tau, descent_mode=descent_mode, log=log)
 
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
 
@@ -511,7 +520,8 @@ def train_ANN_and_make_model_function(
             Y = np.reshape(Y, (len(Y), 1))
 
         # Scale the input
-        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+                                          * alpha + (Y - y_min) * beta)
 
         # Compute the scaled output
         c_scaled = modfunc(Y_scaled)
@@ -536,7 +546,8 @@ def train_ANN_and_make_model_function(
 
         Y = pad_func(Y)
 
-        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+                                          * alpha + (Y - y_min) * beta)
 
         # gradent of the scaled c with respect to the scaled input Y
         dc_scaled_scaled = getGradANN(Y_scaled, K, h, W, b, w, mu)
@@ -548,6 +559,18 @@ def train_ANN_and_make_model_function(
 
         return dc
 
+    def numerical_modfunc(Y):
+        dy = 1e-6
+        return np.array([((scaled_modfunc((y +
+                                           np.identity(len(y)) *
+                                           dy /
+                                           2).T) -
+                           scaled_modfunc((y -
+                                           np.identity(len(y)) *
+                                           dy /
+                                           2).T)) /
+                          dy) for y in Y.T]).T
+
     # Return the scaled model function and the evolution of the
     # objective function for analisys
-    return (scaled_modfunc, gradient_modfunc, Js)
+    return (scaled_modfunc, numerical_modfunc, Js)
