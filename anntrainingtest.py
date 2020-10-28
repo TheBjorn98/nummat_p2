@@ -6,6 +6,7 @@ from time import time
 
 import ann
 
+import sys
 
 def f1(y):
     return 1 / 2 * y**2
@@ -51,11 +52,15 @@ def train_1d_function(i, I, d, K, h, tau, it_max, tol, filename=None):
 
     print(f"took {time() - t:.2f} seconds to train")
 
+    print(f"J = {Js[-1]}")
+
     plt.plot(Js)
     plt.yscale("log")
     if filename is not None:
-        plt.savefig(filename + ".J.png")
-        plt.savefig(filename + ".J.pdf")
+        plt.savefig("J.png")
+        plt.savefig("J.pdf")
+        plt.clf()
+        plt.cla()
     else:
         plt.show()
 
@@ -72,8 +77,10 @@ def train_1d_function(i, I, d, K, h, tau, it_max, tol, filename=None):
     plt.plot(y_plot_grid, Z, label="F")
     plt.legend()
     if filename is not None:
-        plt.savefig(filename + ".F.png")
-        plt.savefig(filename + ".F.pdf")
+        plt.savefig("F.png")
+        plt.savefig("F.pdf")
+        plt.clf()
+        plt.cla()
     else:
         plt.show()
 
@@ -81,13 +88,15 @@ def train_1d_function(i, I, d, K, h, tau, it_max, tol, filename=None):
     plt.plot(y_plot_grid, dZ, label="dF")
     plt.legend()
     if filename is not None:
-        plt.savefig(filename + ".dF.png")
-        plt.savefig(filename + ".dF.pdf")
+        plt.savefig("dF.png")
+        plt.savefig("dF.pdf")
+        plt.clf()
+        plt.cla()
     else:
         plt.show()
 
 
-train_1d_function(0, 10, 4, 4, 1, 0.1, 10000, 1e-4)
+# train_1d_function(0, 10, 4, 4, 1, 0.1, 10000, 1e-4)
 
 
 def make_multid_grid(low, high, n):
@@ -129,7 +138,7 @@ functions_nd = [(f2d1, df2d1, [(-2, -2), (2, 2)]),
                 (f3d1, df3d1, [(-2, -2, -2), (2, 2, 2)])]
 
 
-def train_nd_function(i, I, d, K, h, tau, it_max, tol):
+def train_nd_function(i, I, d, K, h, tau, it_max, tol, filename=None):
     f, df, intervals = functions_nd[i]
 
     Y, _ = make_multid_grid(intervals[0], intervals[1], I)
@@ -143,9 +152,17 @@ def train_nd_function(i, I, d, K, h, tau, it_max, tol):
 
     print(f"took {time() - t:.2f} seconds to train")
 
+    print(f"J = {Js[-1]}")
+
     plt.plot(Js)
     plt.yscale("log")
-    plt.show()
+    if filename is not None:
+        plt.savefig("J.png")
+        plt.savefig("J.pdf")
+        plt.clf()
+        plt.cla()
+    else:
+        plt.show()
 
     Y_eval_grid, dV = make_multid_grid(intervals[0], intervals[1], 50)
 
@@ -161,3 +178,33 @@ def train_nd_function(i, I, d, K, h, tau, it_max, tol):
 
 
 # train_nd_function(2, 8, 4, 4, 1, 0.005, 10000, 1e-4)
+
+if __name__ == "__main__":
+    argv = sys.argv
+    function_dim = int(argv[1])
+    i = int(argv[2])
+    I = int(argv[3])
+    d = int(argv[4])
+    K = int(argv[5])
+    h = float(argv[6])
+    tau = float(argv[7])
+    it_max = int(argv[8])
+    tol = float(argv[9])
+    filename = argv[10]
+    print(f"""
+Job Info:
+function_dim = {function_dim}
+i = {i}
+I = {I}
+d = {d}
+K = {K}
+h = {h}
+tau = {tau}
+it_max = {it_max}
+tol = {tol}
+filename = {filename}
+""")
+    if function_dim == 1:
+        train_1d_function(i, I, d, K, h, tau, it_max, tol, filename=filename)
+    else:
+        train_nd_function(i, I, d, K, h, tau, it_max, tol, filename=filename)
