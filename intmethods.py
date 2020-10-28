@@ -27,7 +27,27 @@ def intMeth(p,q,dTdp, dVdq, it_max, tol, func, step):
         diff = (np.linalg.norm(ps[-2] - ps[-1]) + np.linalg.norm(qs[-2] - qs[-1]))/2 #Marcus fiks denne koden, takk
         it += 1
 
-    return np.array(ps), np.array(qs)
+    return np.array(ps), np.array(qs) #er vel kanskje ikke nødvendig hvis de allerede er arrays..
+
+
+def nonlinPend(q,p):
+    def dTdp(p):
+        return p
+    def dVdq(q):
+        #m = ???
+        g = 9.81
+        #l = ???
+        return m*g*l*np.sin(q)
+    return dTdp, dVdq
+
+def keplerTwoBody(q,p): 
+    def dTdp(p):
+        return p
+    def dVdq(q):
+        gradVec = [q[0]/(q[0]**2 + q[1]**2)**(3/2), q[1]/(q[0]**2 + q[1]**2)**(3/2)]
+        #Manually constructs the gradient vector 
+        return np.array(vec)
+
 
 
 
