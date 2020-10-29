@@ -23,7 +23,7 @@ def make_local_job(
         tol,
         name):
     filetext = f"""
-python3 ../../anntrainingtest.py {dim} {index} {I} {d} {K} {h} {tau} {it_max} {tol} {name} > out.txt
+python3 ../../../anntrainingtest.py {dim} {index} {I} {d} {K} {h} {tau} {it_max} {tol} {name} > out.txt
 """
     if not os.path.exists(f"{name}/"):
         subprocess.call(f"mkdir {name}", shell=True)
@@ -42,17 +42,13 @@ def make_and_run(x):
     os.chdir("..")
 
 
-def do_1d_tests(idun=False):
-    i = [0, 1, 2]
-    I = [10, 50]
-    d = [2, 4, 8]
-    K = [2, 4, 8]
-    h = [1]
-    tau = [0.01, 0.05, 0.1]
-    it_max = [100000]
-    tol = [1e-5]
-
-    os.chdir("local_parallell")
+def do_1d_tests(i, I, d, K, h, tau, it_max, tol, folder):
+    os.chdir("results")
+    if os.path.exists(folder):
+        subprocess.call(f"rm {folder}/* -r", shell=True)
+    else:
+        subprocess.call(f"mkdir {folder}", shell=True)
+    os.chdir(folder)
 
     iterator = itertools.product(i, I, d, K, h, tau, it_max, tol)
 
@@ -76,7 +72,3 @@ def do_1d_tests(idun=False):
             make_and_run, list(zip(
                 range(l), itertools.product(
                     i, I, d, K, h, tau, it_max, tol))))
-
-
-if __name__ == "__main__":
-    do_1d_tests()
