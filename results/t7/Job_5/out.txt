@@ -1,0 +1,64 @@
+
+Job Info:
+function_dim = 2
+i = 0
+I = 10
+d = 4
+K = 4
+h = 1.0
+tau = 0.1
+it_max = 100000
+tol = 1e-10
+filename = Job_5
+
+2250 / 100000, order of error: 1.036
+4502 / 100000, order of error: 1.036
+6729 / 100000, order of error: 1.036
+8983 / 100000, order of error: 1.036
+11238 / 100000, order of error: 1.036
+13507 / 100000, order of error: 1.036
+15762 / 100000, order of error: 1.036
+17991 / 100000, order of error: 1.036
+20257 / 100000, order of error: 1.036
+22524 / 100000, order of error: 1.036
+24774 / 100000, order of error: 1.036
+26800 / 100000, order of error: 1.036
+28828 / 100000, order of error: 1.036
+30859 / 100000, order of error: 1.036
+32890 / 100000, order of error: 1.036
+34917 / 100000, order of error: 1.036
+36944 / 100000, order of error: 1.036
+38975 / 100000, order of error: 1.036
+41004 / 100000, order of error: 1.036
+43033 / 100000, order of error: 1.036
+45065 / 100000, order of error: 1.036
+47096 / 100000, order of error: 1.036
+49124 / 100000, order of error: 1.036
+51154 / 100000, order of error: 1.036
+53184 / 100000, order of error: 1.036
+55216 / 100000, order of error: 1.036
+57245 / 100000, order of error: 1.036
+59278 / 100000, order of error: 1.036
+61310 / 100000, order of error: 1.036
+63342 / 100000, order of error: 1.036
+65378 / 100000, order of error: 1.036
+67414 / 100000, order of error: 1.036
+69451 / 100000, order of error: 1.036
+71487 / 100000, order of error: 1.036
+73523 / 100000, order of error: 1.036
+75559 / 100000, order of error: 1.036
+77594 / 100000, order of error: 1.036
+79630 / 100000, order of error: 1.036
+81667 / 100000, order of error: 1.036
+83702 / 100000, order of error: 1.036
+85737 / 100000, order of error: 1.036
+87772 / 100000, order of error: 1.036
+89805 / 100000, order of error: 1.036
+91839 / 100000, order of error: 1.036
+93872 / 100000, order of error: 1.036
+95904 / 100000, order of error: 1.036
+97994 / 100000, order of error: 1.036
+took 47.91 seconds to train
+J = 10.86799910922783
+function error: 130.2748065019234
+gradient error: 26.012265343900772

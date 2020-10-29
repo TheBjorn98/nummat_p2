@@ -15,14 +15,8 @@ import os
 
 all_data = get_traj_data.concatenate(0, 50)
 
-Q_min = np.min(all_data["Q"])
-Q_max = np.max(all_data["Q"])
-
 P_min = np.min(all_data["P"])
 P_max = np.max(all_data["P"])
-
-V_min = np.min(all_data["V"])
-V_max = np.max(all_data["V"])
 
 T_min = np.min(all_data["T"])
 T_max = np.max(all_data["T"])
@@ -105,7 +99,7 @@ def resume_with_big_data(lo, hi, plot_index=0):
     Y = batch_data["P"]
     c = batch_data["T"]
 
-    theta = test_single_batch(Y, c, plot_index, theta=theta, tau=0.00001)
+    theta = test_single_batch(Y, c, plot_index, theta=theta, tau=0.0001 / (hi - lo))
 
     with open("theta.pickle", "wb") as file:
         pickle.dump(theta, file)
@@ -117,6 +111,11 @@ if __name__ == "__main__":
     # startup()
     # resume()
     resume_with_big_data(0, 10, 0)
-    resume_with_big_data(5, 15, 1)
-    resume_with_big_data(10, 20, 2)
-    resume_with_big_data(15, 25, 3)
+    resume_with_big_data(15, 25, 1)
+    resume_with_big_data(5, 15, 2)
+    resume_with_big_data(10, 20, 3)
+    resume_with_big_data(0, 10, 4)
+    resume_with_big_data(5, 15, 5)
+    resume_with_big_data(10, 20, 6)
+    resume_with_big_data(15, 25, 7)
+    resume_with_big_data(0, 25, 8)

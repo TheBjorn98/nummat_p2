@@ -1,0 +1,150 @@
+
+Job Info:
+function_dim = 2
+i = 0
+I = 10
+d = 8
+K = 8
+h = 1.0
+tau = 0.005
+it_max = 100000
+tol = 1e-10
+filename = Job_9
+
+653 / 100000, order of error: 1.227
+1306 / 100000, order of error: 1.227
+1960 / 100000, order of error: 1.227
+2614 / 100000, order of error: 1.227
+3268 / 100000, order of error: 1.227
+3922 / 100000, order of error: 1.227
+4575 / 100000, order of error: 1.227
+5228 / 100000, order of error: 1.227
+5881 / 100000, order of error: 1.227
+6534 / 100000, order of error: 1.227
+7187 / 100000, order of error: 1.227
+7840 / 100000, order of error: 1.227
+8493 / 100000, order of error: 1.227
+9145 / 100000, order of error: 1.227
+9799 / 100000, order of error: 1.227
+10452 / 100000, order of error: 1.227
+11105 / 100000, order of error: 1.227
+11759 / 100000, order of error: 1.227
+12412 / 100000, order of error: 1.227
+13066 / 100000, order of error: 1.227
+13719 / 100000, order of error: 1.227
+14371 / 100000, order of error: 1.227
+15024 / 100000, order of error: 1.227
+15677 / 100000, order of error: 1.227
+16337 / 100000, order of error: 1.227
+16998 / 100000, order of error: 1.227
+17660 / 100000, order of error: 1.227
+18322 / 100000, order of error: 1.227
+18984 / 100000, order of error: 1.227
+19646 / 100000, order of error: 1.227
+20310 / 100000, order of error: 1.227
+20973 / 100000, order of error: 1.227
+21647 / 100000, order of error: 1.227
+22331 / 100000, order of error: 1.227
+23015 / 100000, order of error: 1.227
+23708 / 100000, order of error: 1.227
+24417 / 100000, order of error: 1.227
+25126 / 100000, order of error: 1.227
+25836 / 100000, order of error: 1.227
+26544 / 100000, order of error: 1.227
+27251 / 100000, order of error: 1.227
+27962 / 100000, order of error: 1.227
+28674 / 100000, order of error: 1.227
+29386 / 100000, order of error: 1.227
+30099 / 100000, order of error: 1.227
+30812 / 100000, order of error: 1.227
+31527 / 100000, order of error: 1.227
+32241 / 100000, order of error: 1.227
+32951 / 100000, order of error: 1.227
+33673 / 100000, order of error: 1.227
+34408 / 100000, order of error: 1.227
+35143 / 100000, order of error: 1.227
+35879 / 100000, order of error: 1.227
+36617 / 100000, order of error: 1.227
+37355 / 100000, order of error: 1.227
+38094 / 100000, order of error: 1.227
+38831 / 100000, order of error: 1.227
+39572 / 100000, order of error: 1.227
+40311 / 100000, order of error: 1.227
+41048 / 100000, order of error: 1.227
+41782 / 100000, order of error: 1.227
+42520 / 100000, order of error: 1.227
+43258 / 100000, order of error: 1.227
+43996 / 100000, order of error: 1.227
+44734 / 100000, order of error: 1.227
+45465 / 100000, order of error: 1.227
+46192 / 100000, order of error: 1.227
+46929 / 100000, order of error: 1.227
+47666 / 100000, order of error: 1.227
+48395 / 100000, order of error: 1.227
+49174 / 100000, order of error: 1.227
+49972 / 100000, order of error: 1.227
+50768 / 100000, order of error: 1.227
+51564 / 100000, order of error: 1.227
+52361 / 100000, order of error: 1.227
+53158 / 100000, order of error: 1.227
+53955 / 100000, order of error: 1.227
+54751 / 100000, order of error: 1.227
+55546 / 100000, order of error: 1.227
+56343 / 100000, order of error: 1.227
+57138 / 100000, order of error: 1.227
+57933 / 100000, order of error: 1.227
+58729 / 100000, order of error: 1.227
+59527 / 100000, order of error: 1.227
+60325 / 100000, order of error: 1.227
+61126 / 100000, order of error: 1.227
+61926 / 100000, order of error: 1.227
+62729 / 100000, order of error: 1.227
+63532 / 100000, order of error: 1.227
+64334 / 100000, order of error: 1.227
+65115 / 100000, order of error: 1.227
+65937 / 100000, order of error: 1.227
+66763 / 100000, order of error: 1.227
+67591 / 100000, order of error: 1.227
+68418 / 100000, order of error: 1.227
+69242 / 100000, order of error: 1.227
+70069 / 100000, order of error: 1.227
+70897 / 100000, order of error: 1.227
+71725 / 100000, order of error: 1.227
+72553 / 100000, order of error: 1.227
+73381 / 100000, order of error: 1.227
+74208 / 100000, order of error: 1.227
+75036 / 100000, order of error: 1.227
+75861 / 100000, order of error: 1.227
+76686 / 100000, order of error: 1.227
+77511 / 100000, order of error: 1.227
+78335 / 100000, order of error: 1.227
+79159 / 100000, order of error: 1.227
+79984 / 100000, order of error: 1.227
+80808 / 100000, order of error: 1.227
+81632 / 100000, order of error: 1.227
+82458 / 100000, order of error: 1.227
+83283 / 100000, order of error: 1.227
+84107 / 100000, order of error: 1.227
+84933 / 100000, order of error: 1.227
+85756 / 100000, order of error: 1.227
+86581 / 100000, order of error: 1.227
+87405 / 100000, order of error: 1.227
+88228 / 100000, order of error: 1.227
+89051 / 100000, order of error: 1.227
+89875 / 100000, order of error: 1.227
+90699 / 100000, order of error: 1.227
+91523 / 100000, order of error: 1.227
+92348 / 100000, order of error: 1.227
+93172 / 100000, order of error: 1.227
+93996 / 100000, order of error: 1.227
+94821 / 100000, order of error: 1.227
+95645 / 100000, order of error: 1.227
+96470 / 100000, order of error: 1.227
+97294 / 100000, order of error: 1.227
+98119 / 100000, order of error: 1.227
+98943 / 100000, order of error: 1.227
+99767 / 100000, order of error: 1.227
+took 133.28 seconds to train
+J = 16.86799999999916
+function error: 270.0105600262827
+gradient error: 26.01226592840372
