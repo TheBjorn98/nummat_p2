@@ -11,27 +11,41 @@ from support import concatflat, reconstruct_flat
 
 # Activation function, sigmoid function
 def sigma(x):
+    '''Activation function, sigmoid'''
     return np.tanh(x)
 
 
 # Derivative of activation function wrt. x
 # Used for back-propagation
 def sigPr(x):
+    '''Derivative of activation function'''
     return 1 - np.tanh(x)**2
 
 
 # Hypothesis function, identity function
 def eta(x):
+    '''Hypothesis function'''
     return .5 * (1 + np.tanh(x / 2))
 
 
 # Derivative of hypothesis function wrt. x
 # Used for back-propagation in the step from output to output layer
 def etaPr(x):
+    '''Derivative of the hypothesis function'''
     return .25 * (1 - np.tanh(x / 2)**2)
 
 
 def make_padding_function(paddingmode, d):
+    '''
+    Returns function which pads the input data as to embedd it in a larger vectorspace.
+    
+    zeros: Appends zeros until d is reached
+        [1, 2] -> [1, 2, 0, 0]
+    tiling: Appends the vector itself until d is reached, superfluous elements are dropped
+        [1, 2] -> [1, 2, 1, 2]
+    repeat: Appends elementwise so the first element is repeated a number of times, and so on
+        [1, 2] -> [1, 1, 2, 2]
+    '''
     if paddingmode == "zeros":
         def pad_zero(Y):
             d0, I = Y.shape
@@ -57,8 +71,17 @@ def make_padding_function(paddingmode, d):
         raise Exception("Padding mode not implemented!")
 
 
-# Function to make function
+# Function to make function approximator as if it was a "normal function"
+# Performs only a forward sweep and saves no intermediate steps to save RAM
 def make_model_function(K, h, W, b, w, mu, pad_func):
+    '''Input:
+        (W, b, w, mu) = theta of the ANN
+        K: number of hidden layers
+        h: stepsize between layers
+        pad_func: padding scheme
+    Returns:
+        model_function: Performing only a forward sweep, saving nothing
+    '''
     def model_function(Y):
         Y = pad_func(Y)
         d, I = Y.shape
@@ -76,15 +99,27 @@ def make_model_function(K, h, W, b, w, mu, pad_func):
 
 
 # Equation 4
-# Returns all the hidden layer node values for I input vectors
+# Returns all intermediate values for I input vectors
 # Y: d x I matrix of I input vectors
 # K: Integer number of hidden layers
 # h: stepsize
 # W: d x d x K 3-tensor: colletion of weight matrices
 # b: d x K matrix: list of all b_k offsets
 def getZ(Y, K, h, W, b):
-    # d = np.shape(Y)[0]
-    # I = np.shape(Y)[1]
+    '''Computes all Zk in a forward sweep
+
+    Input:
+        Y: input data (dxI matrix)
+        K: number of hidden layers
+        h: stepsize between layers
+        W: weights between layers
+        b: offsets between layers
+    Forward sweep to get all Z^{(k)}
+    
+    Return:
+        Zs: all intermediate values of the network at the 
+        current state in a (d, d, K+1) collection of matrices
+    '''
     d, I = Y.shape
 
     # Zs is a collection of K + 1 matrices
@@ -94,9 +129,6 @@ def getZ(Y, K, h, W, b):
     Zs[:, :, 0] = Y
 
     for i in range(K):
-        # TODO: Consider fixing indices so that transpose are no longer
-        # necessary
-        # or TODO: Explain transpose shit
         Zs[:, :, i + 1] = (
             Zs[:, :, i] + (
                 h * sigma(
@@ -113,117 +145,87 @@ def getZ(Y, K, h, W, b):
 # ZK: d x I matrix of last layer Z
 # mu: offset scalar
 def getUpsilon(ZK, w, mu):
+    '''Computes the output values from the function approximator
+    by using the equation for the terminal layer
+
+    Return: Upsilon
+    '''
     return eta((ZK.T @ w) + mu)
 
 
 # Equation 10
 # Yc = (Upsilon - c)
 def getPK(Yc, ZK, w, mu):
+    '''
+    Get first back propagation vector (or dxI matrix)
 
-    # I = np.shape(ZK)[1]
-
-    # t1 = ((ZK.T @ w).T + mu).T
-    # t2 = etaPr(t1)
-    # t3 = Yc * t2
-    # print("ZK: {}".format(np.shape(ZK)))
-    # print("w: {}".format(np.shape(w)))
-    # print("ZK.T @ w + mu: {}".format(np.shape(t1)))
-    # print("etaPr: {}".format(np.shape(t2)))
-    # print("Yc: {}".format(np.shape(Yc)))
-    # print("Yc * etaPr(ZK.T @ w + mu): {}".format(np.shape(t3)))
-    # t4 = np.outer(w, t3.T)
-
-    # return t4
-
+    Input:
+        Yc: (Upsilon - c)
+        ZK: Intermediate values at terminal layer
+        w : Weights used in G(ZK)
+        mu: Offset used in G(ZK)
+    Return:
+        PK: delJ / delZK, first set of propagation vectors
+    '''
     return np.outer(
-        w, (
-            Yc * etaPr(
-                ((ZK.T @ w).T + mu).T  # * np.ones((I, 1))
-            )
-        ).T
+        w, 
+        (Yc * etaPr(((ZK.T @ w).T + mu).T)).T
     )
 
 
-# Equation 11
-def getP(PK, Zs, h, K, W, b):
+# Equation 11 
+def getP(PK, Zs, h, W, b):
+    '''
+    Computes all remaining back propagation vectors
 
-    d = np.shape(PK)[0]
-    I = np.shape(PK)[1]
+    Input:
+        PK: back propagation for terminal layer
+        Zs: all Zk from the forward sweep
+        h : stepsize between layers
+        W : weights between hidden layers
+        b : offset between hidden layers
+    '''
+    d, I = np.shape(PK)
+    K = np.shape(W)[2]
 
     Ps = np.zeros((d, I, K))
 
     Ps[:, :, K - 1] = PK
 
+    # The lines are split for readability
+    # The calculations correspont to eq 11 in the project
     for i in range(K - 2, 0, -1):
-        # Ps[:, :, i] = (
-        #     Ps[:, :, i + 1] + (
-        #         h * W[:, :, i].T @ (
-        #             sigPr(W[:, :, i] @ Zs[:, :, i] + b[:, i])
-        #               * Ps[:, :, i + 1]
-        #         )
-        #     )
-        # )
-
-        # TODO: recondense this expansion
-
-        tmp1 = W[:, :, i] @ Zs[:, :, i]
-        tmp2 = (tmp1.T + b[:, i]).T
-        tmp3 = sigPr(tmp2)
-        tmp4 = Ps[:, :, i + 1] * tmp3
-        tmp5 = W[:, :, i].T @ tmp4
-        Ps[:, :, i] = Ps[:, :, i + 1] + h * tmp5
-
-        # print("Creating Ps[:, :, {}]:".format(i))
-        # print("\nW @ Zk-1:\n{}".format(tmp1))
-        # print("\nW @ Zk-1 + bk-1:\n{}".format(tmp2))
-        # print("\nsigPr(W @ Zk-1 + bk-1):\n{}".format(tmp3))
-        # print("\nP(k):\n{}".format(Ps[:, :, i + 1]))
-        # print("\nP(k) o sigPr(W @ Zk-1 + bk-1):\n{}".format(tmp4))
-        # print("\nW.T @ P(k) o sigPr(W @ Zk-1 + bk-1):\n{}".format(tmp5))
-        # print("\nResult of P{}:\n{}".format(i, Ps[:, :, i]))
+        # sig_k: sigma'(Wk Zk + bk)
+        sig_k = sigPr(((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
+        # hadamard: W_k^T (sig_k * Pk)
+        hadamard = W[:, :, i].T @ (Ps[:, :, i + 1] * sig_k)
+        # Pk = Pk-1 + h * scnd_term
+        Ps[:, :, i] = Ps[:, :, i + 1] + h * hadamard
 
     return Ps
 
 
-# Upsilon: I dim vector
-# c: I vector of fasit
+# Upsilon: I-vector
+# c: I vector of exact values
 def getYc(Upsilon, c):
+    '''Computes Yc = Upsilon - c to save recomputations'''
     return (Upsilon.T - c).T
-
-# the non transpose of the non (Upsilon - c) part of equation 8
-# This showed up a lot and was useful to have as a function
 
 
 def getNu(ZK, w, mu):
+    '''Computes nu = eta'(ZK^T w + mu) to save recomputations'''
     return etaPr(ZK.T @ w + mu)
 
-# Common part between equation 12 and 13
 
-
-def getHk(Ps, Zs, K, h, W, b):
-
-    d = np.shape(Ps)[0]
-    I = np.shape(Ps)[1]
+def getHk(Ps, Zs, h, W, b):
+    '''Computes Hk (common part between eq 12 and 13) to save recomputation'''
+    d, I, K = np.shape(Ps)
     Hs = np.zeros((d, I, K))
 
     for i in range(K - 1):
-
-        # TODO: recondense this expansion
-
-        tmp1 = W[:, :, i] @ Zs[:, :, i]
-        tmp2 = (tmp1.T + b[:, i]).T
-        tmp3 = sigPr(tmp2)
-        tmp4 = Ps[:, :, i + 1] * tmp3
-        Hs[:, :, i] = h * tmp4
-        # Hs[:, :, i] =
-        #   h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
-
-        # print("Creating Hs[:, :, {}]:".format(i))
-        # print("\nW @ Zk:\n{}".format(tmp1))
-        # print("\nW @ Zk + bk:\n{}".format(tmp2))
-        # print("\nsigPr(W @ Zk + bk):\n{}".format(tmp3))
-        # print("\nP(k+1):\n{}".format(Ps[:, :, i + 1]))
-        # print("\nP(k+1) o sigPr(W @ Zk + bk):\n{}".format(tmp4))
+        sig_k = sigPr(((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
+        hadamard = Ps[:, :, i + 1] * sig_k
+        Hs[:, :, i] = h * hadamard
 
     return Hs
 
@@ -237,14 +239,13 @@ def getHk(Ps, Zs, K, h, W, b):
 # b: d x K matrix of offsets
 # w: d vector of output weights
 # mu: offset scalar
-def getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu):
+def getdelJ(Ups, c, Ps, Zs, h, W, b, w, mu):
 
-    d = np.shape(Ps)[0]
-    I = np.shape(Ps)[1]
+    d, I, K = np.shape(Ps)
 
     Yc = getYc(Ups, c)
     nu = getNu(Zs[:, :, K], w, mu)
-    Hs = getHk(Ps, Zs, K, h, W, b)
+    Hs = getHk(Ps, Zs, h, W, b)
 
     dJdmu = nu.T @ Yc  # Should be scalar
     dJdw = Zs[:, :, K] @ (Yc * nu)  # Should be d-vec
@@ -277,7 +278,16 @@ def getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu):
 # w: output weights
 # mu: output offset
 def updateTheta(tau, dJ, W, b, w, mu):
+    '''Updates theta according to eq. 7 in the project description
 
+    Input:
+        tau: learning factor
+        dJ : gradient of the objective function wrt. theta
+        W, b, w, mu: theta, really
+    Output:
+        tau: to keep descent mode consistent and distinguish from ADAM
+        Wn, bn, wn, mun: Updated theta
+    '''
     Wn = W - tau * dJ[0]
     bn = b - tau * dJ[1]
     wn = w - tau * dJ[2]
@@ -292,8 +302,6 @@ def setupAdam(dim):
     return (v, m, 1)
 
 
-# TODO: find a concise way to construct theta from W, b, w and mu
-# and recover these from theta
 def adamTheta(state, dJ, W, b, w, mu):
     beta1 = 0.9
     beta2 = 0.999
@@ -315,9 +323,20 @@ def adamTheta(state, dJ, W, b, w, mu):
     return ((v, m, i + 1), W, b, w, mu)
 
 
-def getGradANN(Y, K, h, W, b, w, mu):
+def getGradANN(Y, h, W, b, w, mu):
+    '''Computes gradient according to derivation from the project report
+    section 3 subsection "Implementation of the derived gradient
+
+    Input:
+        Y: dxI matrix of all input
+        h: stepsize between layers
+        W, b, w, mu: theta
+    Output:
+        acc: the accumulated gradient from backtracking through all layers
+    '''
+    K = np.shape(W)[2]
     Zs = getZ(Y, K, h, W, b)
-    acc = w * (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T
+    acc = w @ (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T
     # acc starts as grad(eta(ZK.T @ w + mu))
 
     for k in range(K, 0, -1):
@@ -346,35 +365,28 @@ def trainANN(
         tau=None,
         descent_mode="gradient",
         log=False):
-    '''
-    d, K, h and tau are model parameters for:
-        d: dimension of spaces in hidden layers
+    '''Trains a ResNet ANN within the given parameters
 
-        K: number of hidden layers in the ResNet model
-        h: stepsize for emphazising internal layers in the model
+    Input:
+        d:   dimension of spaces in hidden layers
+        K:   number of hidden layers in the ResNet model
+        h:   stepsize for emphazising internal layers in the model
+        Y: d0xI matrix with input data, must be scaled beforehand
+        c: I-vector of exact data for evaluating performance
+        it_max: sets a ceiling for compute time, maximal number of training rounds
+        tol: error tolerance, when error dips below, model is done training
         tau: learning parameter declaring how much of the gradient is included
-    Y: d0xI matrix with input data, must be scaled beforehand
-    c: I-vector of exact data for evaluating performance
-    it_max: sets a cieling for compute time, maximal number of training rounds
-    tol: error tolerance, when error dips below, model is done training
-
-    Returns: Weights and activations for the ResNet
-        W, b, w, mu
+        descent_mode: "gradient" or "adam"
+        log: TODO
+    Output: 
+        W, b, w, mu: Weights and activations (offsets) for the ResNet
     '''
-
-    # TODO: implement more sophisticated tolerance criterion
-
     # Padding the input data
-
     d0, I = np.shape(Y)
-
     if d0 != d:
         raise Exception("Input must be padded")
 
-    # print("Y = {}".format(Y))
-
     # Initialization
-
     W = np.random.uniform(size=(d, d, K))
     b = np.random.uniform(size=(d, K))
     w = np.random.uniform(size=(d, 1))
@@ -414,9 +426,9 @@ def trainANN(
         # print("PK: {}".format(np.shape(PK)))
 
         # Getting all Pk for back-propagation
-        Ps = getP(PK, Zs, h, K, W, b)
+        Ps = getP(PK, Zs, h, W, b)
         # Computing gradient of obj.func. for use in update
-        dJ = getdelJ(Ups, c, Ps, Zs, K, h, W, b, w, mu)
+        dJ = getdelJ(Ups, c, Ps, Zs, h, W, b, w, mu)
 
         # Updating the weights and activations in the model
         # Update-scheme followinmg from details in the project
@@ -449,6 +461,25 @@ def train_ANN_and_make_model_function(
         activation_function=(sigma, sigPr),
         hypothesis_function=(eta, etaPr),
         log=False):
+    '''Performs training of a ResNet ANN and wraps functions around both
+    the function approximator and gradient for ease of use.
+
+    Input:
+        Y: d0xI matrix of I unscaled sets of input
+        c: I-vector of exact values for the corresponding input sets
+        d: dimension of hidden layers
+        K: number of hidden layers
+        h: stepsize between layers
+        it_max: maximal number of iterations before forcefully stopping
+        tol: target tolerance for error of the ANN
+        tau: learning factor, must be specified if descent mode is gradient
+        descent_mode: "gradient" or "adam
+        padding_mode: "zeros", "tiling" or "repeat", see make_padding_function
+    Output:
+        scaled_modfunc: function representation of the ANN
+        gradient_modfunc: gradient of function approximator
+        Js: errors from each iteration (useful for gauging effectiveness)
+    '''
     # TODO:
     # - scale input Y
     # - scale output c
@@ -499,6 +530,13 @@ def train_ANN_and_make_model_function(
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
 
     def scaled_modfunc(Y):
+        '''Function representation of the ANN as function approximator
+        
+        Input:
+            Y: d0xI matrix of input data to be evaluated
+        Output:
+            ups: output values approximate to exact values
+        '''
         # The padding functions do not like getting one dimensional input
         # but we want to be able to use our model function as a function
         # of a single vector, or a whole matrix of vector, so in case it's
@@ -514,15 +552,23 @@ def train_ANN_and_make_model_function(
         Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
 
         # Compute the scaled output
-        c_scaled = modfunc(Y_scaled)
+        ups_scaled = modfunc(Y_scaled)
 
         # Apply the inverse scaling to the output
-        c = 1 / (beta - alpha) * ((beta - c_scaled)
+        ups = 1 / (beta - alpha) * ((beta - c_scaled)
                                   * c_min + (c_scaled - alpha) * c_max)
 
-        return c
+        return ups
 
     def gradient_modfunc(Y):
+        '''Function representation of the gradient of the ANN
+        
+        Input:
+            Y: d0xI matrix of input where the gradient is to be evaluated
+        Output:
+            dups: dxI matrix where each column is the gradient of the ANN
+                  in the corresponding input value
+        '''
         # The padding functions do not like getting one dimensional input
         # but we want to be able to use our model function as a function
         # of a single vector, or a whole matrix of vector, so in case it's
@@ -539,14 +585,14 @@ def train_ANN_and_make_model_function(
         Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
 
         # gradent of the scaled c with respect to the scaled input Y
-        dc_scaled_scaled = getGradANN(Y_scaled, K, h, W, b, w, mu)
+        dups_scaled_scaled = getGradANN(Y_scaled, h, W, b, w, mu)
 
         # gradient of the scaled c with respect to the unscaled input Y
         scale_factor = (c_max - c_min) / (y_max - y_min)
-        dc = dc_scaled_scaled  # * scale_factor
-        print(f"Scaling with: {scale_factor:.5f}")
+        dups = dups_scaled_scaled  # * scale_factor
+        # print(f"Scaling with: {scale_factor:.5f}")
 
-        return dc
+        return dups
 
     # Return the scaled model function and the evolution of the
     # objective function for analisys
