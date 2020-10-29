@@ -6,8 +6,8 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=1000MB
-#SBATCH --job-name="Trajectory_Nummat_Neural_training"
-#SBATCH --output=out.txt
+#SBATCH --job-name="PTrajectory_Nummat_Neural_training"
+#SBATCH --output=Pout.txt
 
 module purge
 module load GCCcore/.9.3.0

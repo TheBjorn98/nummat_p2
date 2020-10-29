@@ -1,0 +1,65 @@
+
+Job Info:
+function_dim = 2
+i = 0
+I = 10
+d = 4
+K = 4
+h = 1.0
+tau = 0.005
+it_max = 100000
+tol = 1e-10
+filename = Job_5
+
+1965 / 100000, order of error: 0.066
+3932 / 100000, order of error: 0.024
+5906 / 100000, order of error: -0.230
+7879 / 100000, order of error: -0.381
+9862 / 100000, order of error: -1.043
+11870 / 100000, order of error: -1.528
+13888 / 100000, order of error: -1.807
+15912 / 100000, order of error: -1.939
+17933 / 100000, order of error: -2.031
+19950 / 100000, order of error: -2.103
+21966 / 100000, order of error: -2.155
+23979 / 100000, order of error: -2.185
+25991 / 100000, order of error: -2.201
+28007 / 100000, order of error: -2.213
+30019 / 100000, order of error: -2.224
+32033 / 100000, order of error: -2.234
+34044 / 100000, order of error: -2.243
+36054 / 100000, order of error: -2.251
+38068 / 100000, order of error: -2.258
+40082 / 100000, order of error: -2.264
+42097 / 100000, order of error: -2.269
+44114 / 100000, order of error: -2.274
+46130 / 100000, order of error: -2.279
+48146 / 100000, order of error: -2.284
+50180 / 100000, order of error: -2.289
+52216 / 100000, order of error: -2.295
+54254 / 100000, order of error: -2.302
+56289 / 100000, order of error: -2.309
+58326 / 100000, order of error: -2.318
+60363 / 100000, order of error: -2.332
+62405 / 100000, order of error: -2.281
+64445 / 100000, order of error: -2.336
+66519 / 100000, order of error: -2.334
+68623 / 100000, order of error: -2.324
+70729 / 100000, order of error: -2.345
+72856 / 100000, order of error: -2.355
+75040 / 100000, order of error: -2.360
+77219 / 100000, order of error: -2.370
+79401 / 100000, order of error: -2.378
+81578 / 100000, order of error: -2.383
+83757 / 100000, order of error: -2.390
+85945 / 100000, order of error: -2.396
+88136 / 100000, order of error: -2.400
+90326 / 100000, order of error: -2.404
+92511 / 100000, order of error: -2.411
+94703 / 100000, order of error: -2.415
+96894 / 100000, order of error: -2.417
+99086 / 100000, order of error: -2.421
+took 48.42 seconds to train
+J = 0.0037755467928567033
+function error: 0.028242919688360495
+gradient error: 2.1891377569458395

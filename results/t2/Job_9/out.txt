@@ -1,0 +1,15 @@
+
+Job Info:
+function_dim = 1
+i = 2
+I = 10
+d = 8
+K = 8
+h = 1.0
+tau = 0.05
+it_max = 100000
+tol = 1e-05
+filename = Job_9
+
+took 49.21 seconds to train
+J = 1.4585061224489788
