@@ -47,7 +47,7 @@ def train_1d_function(i, I, d, K, h, tau, it_max, tol, filename=None):
 
     t = time()
 
-    (F, dF, Js) = ann.train_ANN_and_make_model_function(
+    (F, dF, Js, _) = ann.train_ANN_and_make_model_function(
         Y, c, d, K, h, it_max, tol, tau=tau, padding_mode="zeros")
 
     print(f"took {time() - t:.2f} seconds to train")
@@ -147,8 +147,8 @@ def train_nd_function(i, I, d, K, h, tau, it_max, tol, filename=None):
 
     t = time()
 
-    (F, dF, Js) = ann.train_ANN_and_make_model_function(
-        Y, c, d, K, h, it_max, tol, tau=tau, padding_mode="zeros", log=True)
+    (F, dF, Js, _) = ann.train_ANN_and_make_model_function(
+        Y, c, d, K, h, it_max, tol, tau=tau, padding_mode="zeros", log="log.txt")
 
     print(f"took {time() - t:.2f} seconds to train")
 
@@ -169,12 +169,12 @@ def train_nd_function(i, I, d, K, h, tau, it_max, tol, filename=None):
     z = f(Y_eval_grid)
     Z = F(Y_eval_grid)
     e = np.sum((z - Z)**2) * dV
-    print(e)
+    print(f"function error: {e}")
 
     dz = df(Y_eval_grid)
     dZ = dF(Y_eval_grid)
     e = np.sum(normify_grad_matrix(dz - dZ)) * dV
-    print(e)
+    print(f"gradient error: {e}")
 
 
 # train_nd_function(2, 8, 4, 4, 1, 0.005, 10000, 1e-4)

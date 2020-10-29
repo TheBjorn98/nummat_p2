@@ -217,7 +217,8 @@ def getHk(Ps, Zs, K, h, W, b):
         tmp3 = sigPr(tmp2)
         tmp4 = Ps[:, :, i + 1] * tmp3
         Hs[:, :, i] = h * tmp4
-        # Hs[:, :, i] = h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
+        # Hs[:, :, i] = h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T +
+        # b[:, i]).T)
 
         # print("Creating Hs[:, :, {}]:".format(i))
         # print("\nW @ Zk:\n{}".format(tmp1))
@@ -347,7 +348,8 @@ def trainANN(
         tol,
         tau=None,
         descent_mode="gradient",
-        log=False):
+        log=False,
+        theta=None):
     '''
     d, K, h and tau are model parameters for:
         d: dimension of spaces in hidden layers
@@ -377,10 +379,13 @@ def trainANN(
 
     # Initialization
 
-    W = np.random.uniform(size=(d, d, K))
-    b = np.random.uniform(size=(d, K))
-    w = np.random.uniform(size=(d, 1))
-    mu = np.random.uniform(size=(1, 1))
+    if theta is None:
+        W = np.random.uniform(size=(d, d, K))
+        b = np.random.uniform(size=(d, K))
+        w = np.random.uniform(size=(d, 1))
+        mu = np.random.uniform(size=(1, 1))
+    else:
+        (W, b, w, mu) = theta
 
     # W = np.ones((d, d, K)) * 0.5
     # b = np.ones((d, K)) * 0.5
@@ -405,6 +410,13 @@ def trainANN(
 
     t = time()
 
+    if type(log) == str:
+        with open(log, "w") as file:
+            file.write("Starting log:\n")
+    
+    best_theta = None
+    best_J = None
+
     while it < it_max and J > tol:
 
         # Computing Z's in the forward sweep
@@ -417,6 +429,10 @@ def trainANN(
         Yc = (Ups.T - c).T
         J = .5 * np.linalg.norm(Yc) ** 2
         Js.append(J)
+        
+        if best_J is None or J < best_J:
+            best_theta = (W, b, w, mu)
+            best_J = J
 
         # Preparing for back-propagation, getting PK = dJ/dZK
         PK = getPK(Yc, Zs[:, :, -1], w, mu)
@@ -432,14 +448,21 @@ def trainANN(
         # W, b, w, mu = updateTheta(.2, dJ, W, b, w, mu)
         (descent_state, W, b, w, mu) = descent_function(
             descent_state, dJ, W, b, w, mu)
-
+        
         # Another iteration complete!
         it += 1
 
-        if log and (time() - t) > 1:
-            t += 1
-            print(f"{it} / {it_max}, order of error: {np.log10(J):.3f}")
+        if (log) and (time() - t) > 10:
+            t += 10
+            message = f"{it} / {it_max}: {it / it_max * 100:.1f}%, order of error: {np.log10(J):.3f}"
+            if type(log) == str:
+                with open(log, "a") as file:
+                    file.write(message)
+                    file.write("\n")
+            else:
+                print(message)
 
+    # return (*best_theta, Js)
     return (W, b, w, mu, Js)
 
 
@@ -458,7 +481,12 @@ def train_ANN_and_make_model_function(
         padding_mode="zeros",
         activation_function=(sigma, sigPr),
         hypothesis_function=(eta, etaPr),
-        log=False):
+        log=False,
+        theta=None,
+        y_min=None,
+        y_max=None,
+        c_min=None,
+        c_max=None):
     # TODO:
     # - scale input Y
     # - scale output c
@@ -475,14 +503,16 @@ def train_ANN_and_make_model_function(
 
     # Save the min and max y values for scaling both the training data
     # and the input of the resulting model function
-    y_min, y_max = np.min(Y), np.max(Y)
+    if y_min is None:
+        y_min, y_max = np.min(Y), np.max(Y)
 
     # Scale the training data input
     Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
 
     # Save the min and max training output data for scaling the training data
     # and inverse scaling the output of the model function
-    c_min, c_max = np.min(c), np.max(c)
+    if c_min is None:
+        c_min, c_max = np.min(c), np.max(c)
 
     # Scale the training data output
     c = 1 / (c_max - c_min) * ((c_max - c) * alpha + (c - c_min) * beta)
@@ -502,8 +532,9 @@ def train_ANN_and_make_model_function(
             return y
         pad_func = identity
 
-    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c, it_max,
-                                 tol, tau=tau, descent_mode=descent_mode, log=log)
+    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c, it_max, tol,
+                                 tau=tau, descent_mode=descent_mode, log=log,
+                                 theta=theta)
 
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
 
@@ -573,4 +604,4 @@ def train_ANN_and_make_model_function(
 
     # Return the scaled model function and the evolution of the
     # objective function for analisys
-    return (scaled_modfunc, numerical_modfunc, Js)
+    return (scaled_modfunc, numerical_modfunc, Js, (W, b, w, mu))
