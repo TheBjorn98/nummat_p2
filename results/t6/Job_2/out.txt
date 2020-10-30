@@ -1,0 +1,54 @@
+
+Job Info:
+function_dim = 2
+i = 0
+I = 10
+d = 2
+K = 4
+h = 1.0
+tau = 0.005
+it_max = 100000
+tol = 1e-10
+filename = Job_2
+
+3227 / 100000, order of error: 0.074
+6528 / 100000, order of error: 0.073
+8977 / 100000, order of error: 0.073
+11532 / 100000, order of error: 0.073
+14143 / 100000, order of error: 0.072
+16756 / 100000, order of error: 0.070
+19374 / 100000, order of error: 0.065
+22011 / 100000, order of error: 0.037
+24641 / 100000, order of error: -0.299
+27250 / 100000, order of error: -0.922
+29863 / 100000, order of error: -1.143
+32476 / 100000, order of error: -0.992
+35088 / 100000, order of error: -1.015
+37701 / 100000, order of error: -1.020
+40314 / 100000, order of error: -1.049
+42929 / 100000, order of error: -1.054
+45540 / 100000, order of error: -1.089
+48149 / 100000, order of error: -1.097
+50759 / 100000, order of error: -1.120
+53369 / 100000, order of error: -1.144
+55978 / 100000, order of error: -1.181
+58592 / 100000, order of error: -1.203
+61201 / 100000, order of error: -1.209
+63812 / 100000, order of error: -1.242
+66430 / 100000, order of error: -1.258
+69049 / 100000, order of error: -1.257
+71664 / 100000, order of error: -1.284
+74301 / 100000, order of error: -1.280
+76952 / 100000, order of error: -1.305
+79598 / 100000, order of error: -1.313
+82246 / 100000, order of error: -1.320
+84893 / 100000, order of error: -1.311
+87541 / 100000, order of error: -1.317
+90191 / 100000, order of error: -1.322
+92838 / 100000, order of error: -1.342
+95506 / 100000, order of error: -1.347
+98229 / 100000, order of error: -1.339
+took 37.65 seconds to train
+J = 0.0439148560691941
+function error: 0.5898002382899548
+gradient error: 4.578864860345513

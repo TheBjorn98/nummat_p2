@@ -1,0 +1,17 @@
+
+Job Info:
+function_dim = 3
+i = 2
+I = 10
+d = 4
+K = 4
+h = 1.0
+tau = 0.01
+it_max = 100000
+tol = 1e-10
+filename = Job_3
+
+took 199.45 seconds to train
+J = 104.71999995005717
+function error: 1157.1615669247626
+gradient error: 133.2824215329196

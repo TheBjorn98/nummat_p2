@@ -1,4 +1,10 @@
 import numpy as np
+<<<<<<< HEAD
+=======
+import matplotlib.pyplot as plt
+
+from time import time
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 
 from support import concatflat, reconstruct_flat
 
@@ -120,7 +126,11 @@ def getUpsilon(ZK, w, mu):
 # Yc = (Upsilon - c)
 def getPK(Yc, ZK, w, mu):
 
+<<<<<<< HEAD
     # I = np.shape(ZK)[1]
+=======
+    I = np.shape(ZK)[1]
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 
     # t1 = ((ZK.T @ w).T + mu).T
     # t2 = etaPr(t1)
@@ -158,8 +168,12 @@ def getP(PK, Zs, h, K, W, b):
         # Ps[:, :, i] = (
         #     Ps[:, :, i + 1] + (
         #         h * W[:, :, i].T @ (
+<<<<<<< HEAD
         #             sigPr(W[:, :, i] @ Zs[:, :, i] + b[:, i])
         #               * Ps[:, :, i + 1]
+=======
+        #             sigPr(W[:, :, i] @ Zs[:, :, i] + b[:, i]) * Ps[:, :, i + 1]
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
         #         )
         #     )
         # )
@@ -215,8 +229,13 @@ def getHk(Ps, Zs, K, h, W, b):
         tmp3 = sigPr(tmp2)
         tmp4 = Ps[:, :, i + 1] * tmp3
         Hs[:, :, i] = h * tmp4
+<<<<<<< HEAD
         # Hs[:, :, i] =
         #   h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T + b[:, i]).T)
+=======
+        # Hs[:, :, i] = h * (Ps[:, :, i + 1] * ((W[:, :, i] @ Zs[:, :, i]).T +
+        # b[:, i]).T)
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 
         # print("Creating Hs[:, :, {}]:".format(i))
         # print("\nW @ Zk:\n{}".format(tmp1))
@@ -317,11 +336,20 @@ def adamTheta(state, dJ, W, b, w, mu):
 
 def getGradANN(Y, K, h, W, b, w, mu):
     Zs = getZ(Y, K, h, W, b)
+<<<<<<< HEAD
     acc = w * (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T
     # acc starts as grad(eta(ZK.T @ w + mu))
 
     for k in range(K, 0, -1):
         dphi = h * sigPr(((W[:, :, k - 1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
+=======
+    # acc starts as grad(eta(ZK.T @ w + mu))
+    acc = w * (etaPr(((Zs[:, :, K].T @ w).T + mu).T)).T
+
+    for k in range(K, 0, -1):
+        dphi = h * \
+            sigPr(((W[:, :, k - 1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
         acc = acc + (W[:, :, k - 1].T @ (dphi * acc))
 
     return acc  # acc is now grad_y(F) for (F is ANN)
@@ -345,7 +373,12 @@ def trainANN(
         tol,
         tau=None,
         descent_mode="gradient",
+<<<<<<< HEAD
         log=False):
+=======
+        log=False,
+        theta=None):
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
     '''
     d, K, h and tau are model parameters for:
         d: dimension of spaces in hidden layers
@@ -375,10 +408,25 @@ def trainANN(
 
     # Initialization
 
+<<<<<<< HEAD
     W = np.random.uniform(size=(d, d, K))
     b = np.random.uniform(size=(d, K))
     w = np.random.uniform(size=(d, 1))
     mu = np.random.uniform(size=(1, 1))
+=======
+    if theta is None:
+        W = np.random.uniform(size=(d, d, K))
+        b = np.random.uniform(size=(d, K))
+        w = np.random.uniform(size=(d, 1))
+        mu = np.random.uniform(size=(1, 1))
+    else:
+        (W, b, w, mu) = theta
+
+    # W = np.ones((d, d, K)) * 0.5
+    # b = np.ones((d, K)) * 0.5
+    # w = np.ones((d, 1)) * 0.5
+    # mu = np.ones((1, 1)) * 0.5
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 
     if descent_mode == "gradient":
         if tau is None:
@@ -396,6 +444,18 @@ def trainANN(
     J = np.inf
     Js = []
 
+<<<<<<< HEAD
+=======
+    t = time()
+
+    if isinstance(log, str):
+        with open(log, "w") as file:
+            file.write("Starting log:\n")
+
+    best_theta = None
+    best_J = None
+
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
     while it < it_max and J > tol:
 
         # Computing Z's in the forward sweep
@@ -409,6 +469,13 @@ def trainANN(
         J = .5 * np.linalg.norm(Yc) ** 2
         Js.append(J)
 
+<<<<<<< HEAD
+=======
+        if best_J is None or J < best_J:
+            best_theta = (W, b, w, mu)
+            best_J = J
+
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
         # Preparing for back-propagation, getting PK = dJ/dZK
         PK = getPK(Yc, Zs[:, :, -1], w, mu)
         # print("PK: {}".format(np.shape(PK)))
@@ -427,14 +494,87 @@ def trainANN(
         # Another iteration complete!
         it += 1
 
+<<<<<<< HEAD
         if log:
             print(f"{it} / {it_max}, order of error: {np.log(J):.3f}")
 
+=======
+        if (log) and (time() - t) > 10:
+            t += 10
+            message = f"{it} / {it_max}: {it / it_max * 100:.1f}%, order of error: {np.log10(J):.3f}"
+            if isinstance(log, str):
+                with open(log, "a") as file:
+                    file.write(message)
+                    file.write("\n")
+            else:
+                print(message)
+
+    # return (*best_theta, Js)
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
     return (W, b, w, mu, Js)
 
 
 # TODO: Make better name or something
 
+<<<<<<< HEAD
+=======
+
+def make_scaled_modfunc_and_grad(
+        theta,
+        y_min,
+        y_max,
+        c_min,
+        c_max,
+        h=1.0,
+        padding_mode="zeros"):
+    alpha, beta = 0.2, 0.8
+    (W, b, w, mu) = theta
+    modfunc = make_model_function(
+        W.shape[2], h, W, b, w, mu, make_padding_function(
+            padding_mode, W.shape[0]))
+
+    def scaled_modfunc(Y):
+        # The padding functions do not like getting one dimensional input
+        # but we want to be able to use our model function as a function
+        # of a single vector, or a whole matrix of vector, so in case it's
+        # a vector, it is simply reshaped to a matrix with a single column
+        # or in the very special case its a single number, it is reshaped
+        # to a 1x1 matrix
+        if isinstance(Y, float):
+            Y = np.reshape(Y, (1, 1))
+        elif len(Y.shape) == 1:
+            Y = np.reshape(Y, (len(Y), 1))
+
+        # Scale the input
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+                                          * alpha + (Y - y_min) * beta)
+
+        # Compute the scaled output
+        c_scaled = modfunc(Y_scaled)
+
+        # Apply the inverse scaling to the output
+        c = 1 / (beta - alpha) * ((beta - c_scaled)
+                                  * c_min + (c_scaled - alpha) * c_max)
+
+        return c
+
+    # Gradient
+    def numerical_modfunc(Y):
+        dy = 1e-6
+        return np.array([((scaled_modfunc((y +
+                                           np.identity(len(y)) *
+                                           dy /
+                                           2).T) -
+                           scaled_modfunc((y -
+                                           np.identity(len(y)) *
+                                           dy /
+                                           2).T)) /
+                          dy) for y in Y.T]).T
+
+    return scaled_modfunc, numerical_modfunc
+
+
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 def train_ANN_and_make_model_function(
         Y,
         c,
@@ -448,7 +588,16 @@ def train_ANN_and_make_model_function(
         padding_mode="zeros",
         activation_function=(sigma, sigPr),
         hypothesis_function=(eta, etaPr),
+<<<<<<< HEAD
         log=False):
+=======
+        log=False,
+        theta=None,
+        y_min=None,
+        y_max=None,
+        c_min=None,
+        c_max=None):
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
     # TODO:
     # - scale input Y
     # - scale output c
@@ -465,14 +614,24 @@ def train_ANN_and_make_model_function(
 
     # Save the min and max y values for scaling both the training data
     # and the input of the resulting model function
+<<<<<<< HEAD
     y_min, y_max = np.min(Y), np.max(Y)
+=======
+    if y_min is None:
+        y_min, y_max = np.min(Y), np.max(Y)
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 
     # Scale the training data input
     Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
 
     # Save the min and max training output data for scaling the training data
     # and inverse scaling the output of the model function
+<<<<<<< HEAD
     c_min, c_max = np.min(c), np.max(c)
+=======
+    if c_min is None:
+        c_min, c_max = np.min(c), np.max(c)
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 
     # Scale the training data output
     c = 1 / (c_max - c_min) * ((c_max - c) * alpha + (c - c_min) * beta)
@@ -485,13 +644,19 @@ def train_ANN_and_make_model_function(
         Y = pad_func(Y)
     elif d0 > d:
         raise Exception(
+<<<<<<< HEAD
             "Dimension of input is larger than"
             + " dimension of neural net!")
+=======
+            "Dimension of input is larger than" +
+            " dimension of neural net!")
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
     else:
         def identity(y):
             return y
         pad_func = identity
 
+<<<<<<< HEAD
     (W, b, w, mu, Js) = trainANN(d, K, h, Y, c,
                                  it_max, tol, tau=tau,
                                  descent_mode=descent_mode, log=log)
@@ -521,6 +686,41 @@ def train_ANN_and_make_model_function(
                                   * c_min + (c_scaled - alpha) * c_max)
 
         return c
+=======
+    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c, it_max, tol,
+                                 tau=tau, descent_mode=descent_mode, log=log,
+                                 theta=theta)
+
+    modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
+
+    scaled_modfunc, numerical_modfunc = make_scaled_modfunc_and_grad(
+        (W, b, w, mu), y_min, y_max, c_min, c_max, h=h, padding_mode=padding_mode)
+
+    # def scaled_modfunc(Y):
+    #     # The padding functions do not like getting one dimensional input
+    #     # but we want to be able to use our model function as a function
+    #     # of a single vector, or a whole matrix of vector, so in case it's
+    #     # a vector, it is simply reshaped to a matrix with a single column
+    #     # or in the very special case its a single number, it is reshaped
+    #     # to a 1x1 matrix
+    #     if isinstance(Y, float):
+    #         Y = np.reshape(Y, (1, 1))
+    #     elif len(Y.shape) == 1:
+    #         Y = np.reshape(Y, (len(Y), 1))
+
+    #     # Scale the input
+    #     Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+    #                                       * alpha + (Y - y_min) * beta)
+
+    #     # Compute the scaled output
+    #     c_scaled = modfunc(Y_scaled)
+
+    #     # Apply the inverse scaling to the output
+    #     c = 1 / (beta - alpha) * ((beta - c_scaled)
+    #                               * c_min + (c_scaled - alpha) * c_max)
+
+    #     return c
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 
     def gradient_modfunc(Y):
         # The padding functions do not like getting one dimensional input
@@ -536,7 +736,12 @@ def train_ANN_and_make_model_function(
 
         Y = pad_func(Y)
 
+<<<<<<< HEAD
         Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+=======
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+                                          * alpha + (Y - y_min) * beta)
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34
 
         # gradent of the scaled c with respect to the scaled input Y
         dc_scaled_scaled = getGradANN(Y_scaled, K, h, W, b, w, mu)
@@ -548,6 +753,24 @@ def train_ANN_and_make_model_function(
 
         return dc
 
+<<<<<<< HEAD
     # Return the scaled model function and the evolution of the
     # objective function for analisys
     return (scaled_modfunc, gradient_modfunc, Js)
+=======
+    # def numerical_modfunc(Y):
+    #     dy = 1e-6
+    #     return np.array([((scaled_modfunc((y +
+    #                                        np.identity(len(y)) *
+    #                                        dy /
+    #                                        2).T) -
+    #                        scaled_modfunc((y -
+    #                                        np.identity(len(y)) *
+    #                                        dy /
+    #                                        2).T)) /
+    #                       dy) for y in Y.T]).T
+
+    # Return the scaled model function and the evolution of the
+    # objective function for analisys
+    return (scaled_modfunc, numerical_modfunc, Js, (W, b, w, mu))
+>>>>>>> c0ea6a7e8db1e05a6f825df9d8e519d3bb014e34

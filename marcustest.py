@@ -3,98 +3,171 @@ import matplotlib.pyplot as plt
 
 import time
 
-import ann
+import make_idun_files
+import run_paralell_local
+
+idun = True
+
+if idun:
+    do_tests = make_idun_files.do_tests
+else:
+    do_tests = run_paralell_local.do_tests
 
 
-def make_uniform_inp_box(low, high, n):
-    return np.random.uniform(low, high, (n, len(low))).T
+def test1():
+    i = [0]
+    I = [10]
+    d = [2, 4, 8]
+    K = [2, 4, 8]
+    h = [1]
+    tau = [0.05]
+    it_max = [100000]
+    tol = [1e-5]
+
+    do_tests(
+        1, i, I, d, K, h, tau, it_max, tol, folder="t1")
 
 
-def testfunc_1(y):
-    return 0.5 * (y[0]**2 + y[1]**2)
+def test2():
+    i = [2]
+    I = [10]
+    d = [2, 4, 8]
+    K = [2, 4, 8]
+    h = [1]
+    tau = [0.05]
+    it_max = [100000]
+    tol = [1e-5]
+
+    do_tests(
+        1, i, I, d, K, h, tau, it_max, tol, folder="t2")
 
 
-def testfunc_2(y):
-    return 1.0 - np.cos(y)
-    # return np.sin(y) * y
+def test3():
+    i = [2]
+    I = [5, 10, 15, 20, 50, 100]
+    d = [2]
+    K = [4]
+    h = [1]
+    tau = [0.05]
+    it_max = [100000]
+    tol = [1e-10]
+
+    do_tests(
+        1, i, I, d, K, h, tau, it_max, tol, folder="t3")
 
 
-def train_test_func1():
-    I = 100
-    Y = make_uniform_inp_box([-2, -2], [2, 2], I)
-    c = np.array([testfunc_1(Y[:, i]) for i in range(I)])
+def test4():
+    i = [2]
+    I = [100]
+    d = [2]
+    K = [4]
+    h = [1]
+    tau = [0.001, 0.005, 0.01, 0.05, 0.1]
+    it_max = [1000000]
+    tol = [1e-10]
 
-    # print("Y = {}".format(Y.T))
-    # print("c = {}".format(c))
-
-    tau = 0.2
-    d = 8
-    K = 4
-    h = 0.1
-    it_max = 1000
-    tol = 1e-4
-
-    t = time.time()
-
-    (W, b, w, mu, _) = ann.trainANN(d, K, h, Y, c, it_max, tol, tau=tau)
-
-    f = ann.make_model_function(K, h, W, b, w, mu, "repeat", d)
-
-    testy = np.array([[0.5, 1.0]]).T
-
-    print(f(testy))
-    print(testfunc_1(testy))
-
-    # print("took {} seconds".format(time.time() - t))
+    do_tests(
+        1, i, I, d, K, h, tau, it_max, tol, folder="t4")
 
 
-def train_test_func2():
-    I = 100
-    Y = make_uniform_inp_box([-np.pi / 3], [np.pi / 3], I)
-    # print(Y)
-    c = np.squeeze(np.array([testfunc_2(Y[:, i]) for i in range(I)]))
-    # print(c)
+def test5():
+    i = [2]
+    I = [10]
+    d = [2]
+    K = [4]
+    h = [0.01, 0.05, 0.1, 1.0, 10.0]
+    tau = [0.05]
+    it_max = [1000000]
+    tol = [1e-10]
 
-    # print("Y = {}".format(Y.T))
-    # print("c = {}".format(c))
-
-    tau = 0.1
-    d = 2
-    K = 8
-    h = 0.1
-    it_max = 10000
-    tol = 1e-4
-
-    t = time.time()
-
-    (f, Js) = ann.train_ANN_and_make_model_function(
-        Y, c, d, K, h, it_max, tol, tau=tau)
-    
-    print(f"took {time.time() - t:.3f} seconds")
-    
-    plt.plot(np.log(Js))
-    # plt.show()
-    plt.savefig("js.png")
-    plt.clf()
-    plt.cla()
-
-    n = 100
-    ys = np.linspace(-np.pi / 3, np.pi / 3, n)
-    
-    cs = f(np.reshape(ys, (1, n)))
-
-    plt.plot(ys, testfunc_2(ys))
-    plt.plot(ys, cs)
-    plt.savefig("func_fit.png")
-    plt.clf()
-    plt.cla()
-
-    # print("took {} seconds".format(time.time() - t))
+    do_tests(
+        1, i, I, d, K, h, tau, it_max, tol, folder="t5")
 
 
-# TODO: Do scaling for input and output values, and inverse scaling for
-# the actual use of the methods
-# TODO: Fix dimension problems when fitting one dimensional functions
+# 2D function tests:
 
 
-train_test_func2()
+def test6():
+    i = [0]
+    I = [10]
+    d = [2, 4, 8]
+    K = [2, 4, 8]
+    h = [1]
+    tau = [0.005]
+    it_max = [100000]
+    tol = [1e-10]
+
+    do_tests(
+        2, i, I, d, K, h, tau, it_max, tol, folder="t6")
+
+
+def test7():
+    i = [0]
+    I = [10]
+    d = [4]
+    K = [4]
+    h = [1]
+    tau = [0.001, 0.005, 0.01, 0.05, 0.1]
+    it_max = [100000]
+    tol = [1e-10]
+
+    do_tests(
+        2, i, I, d, K, h, tau, it_max, tol, folder="t7")
+
+
+def test8():
+    i = [0]
+    I = [10, 20, 50]
+    d = [4]
+    K = [4]
+    h = [1]
+    tau = [0.001]
+    it_max = [100000]
+    tol = [1e-10]
+
+    do_tests(
+        2, i, I, d, K, h, tau, it_max, tol, folder="t8")
+
+
+# 3d tests
+
+
+def test9():
+    i = [2]
+    I = [10]
+    d = [4, 8, 16]
+    K = [2, 4, 8]
+    h = [1]
+    tau = [0.001]
+    it_max = [100000]
+    tol = [1e-10]
+
+    do_tests(
+        3, i, I, d, K, h, tau, it_max, tol, folder="t9")
+
+
+def test10():
+    i = [2]
+    I = [10]
+    d = [4]
+    K = [4]
+    h = [1]
+    tau = [0.001, 0.005, 0.01]
+    it_max = [100000]
+    tol = [1e-10]
+
+    do_tests(
+        3, i, I, d, K, h, tau, it_max, tol, folder="t10")
+
+
+if __name__ == "__main__":
+    # test1()
+    # test2()
+    # test3()
+    # test4()
+    # test5()
+    # test6()
+    # test7()
+    # test8()
+    # test9()
+    test10()
