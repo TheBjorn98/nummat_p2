@@ -620,13 +620,13 @@ def train_ANN_and_make_model_function(
 
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
 
-        '''Function representation of the ANN as function approximator
-        
-        Input:
-            Y: d0xI matrix of input data to be evaluated
-        Output:
-            ups: output values approximate to exact values
-        '''
+    '''Function representation of the ANN as function approximator
+    
+    Input:
+        Y: d0xI matrix of input data to be evaluated
+    Output:
+        ups: output values approximate to exact values
+    '''
     scaled_modfunc, numerical_modfunc = make_scaled_modfunc_and_grad(
         (W, b, w, mu), y_min, y_max, c_min, c_max, h=h, padding_mode=padding_mode)
 
