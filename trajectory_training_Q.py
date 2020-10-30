@@ -28,7 +28,7 @@ def test_single_batch(Y, c, i, theta=None, tau=0.0001):
     d = 4
     K = 4
     h = 1
-    it_max = 5000
+    it_max = 50000
     tol = 1e-4
 
     (F, dF, Js, theta) = ann.train_ANN_and_make_model_function(
@@ -57,8 +57,8 @@ def startup():
     subprocess.call(f"mkdir results/{foldername}", shell=True)
     batch_data = get_traj_data.generate_data(batch=0)
     os.chdir(f"results/{foldername}")
-    Y = batch_data["Q"][:, :1000]
-    c = batch_data["V"][:1000]
+    Y = batch_data["Q"][:, :500]
+    c = batch_data["V"][:500]
     theta = test_single_batch(Y, c, 0, tau=0.001)
 
     with open("theta.pickle", "wb") as file:
@@ -110,7 +110,9 @@ def resume_with_big_data(lo, hi, plot_index=0):
 if __name__ == "__main__":
     # startup()
     # resume()
-    resume_with_big_data(0, 10, 0)
-    resume_with_big_data(10, 20, 1)
-    resume_with_big_data(5, 15, 2)
-    resume_with_big_data(15, 25, 3)
+    # for i in range(25):
+    #     resume_with_big_data(i, i + 2, i)
+    # resume_with_big_data(0, 25, 25)
+    # resume_with_big_data(15, 40, 26)
+    # resume_with_big_data(25, 50, 27)
+    resume_with_big_data(0, 50, 28)
