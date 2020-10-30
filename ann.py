@@ -410,10 +410,10 @@ def trainANN(
 
     t = time()
 
-    if type(log) == str:
+    if isinstance(log, str):
         with open(log, "w") as file:
             file.write("Starting log:\n")
-    
+
     best_theta = None
     best_J = None
 
@@ -429,7 +429,7 @@ def trainANN(
         Yc = (Ups.T - c).T
         J = .5 * np.linalg.norm(Yc) ** 2
         Js.append(J)
-        
+
         if best_J is None or J < best_J:
             best_theta = (W, b, w, mu)
             best_J = J
@@ -448,14 +448,14 @@ def trainANN(
         # W, b, w, mu = updateTheta(.2, dJ, W, b, w, mu)
         (descent_state, W, b, w, mu) = descent_function(
             descent_state, dJ, W, b, w, mu)
-        
+
         # Another iteration complete!
         it += 1
 
         if (log) and (time() - t) > 10:
             t += 10
             message = f"{it} / {it_max}: {it / it_max * 100:.1f}%, order of error: {np.log10(J):.3f}"
-            if type(log) == str:
+            if isinstance(log, str):
                 with open(log, "a") as file:
                     file.write(message)
                     file.write("\n")
@@ -467,6 +467,62 @@ def trainANN(
 
 
 # TODO: Make better name or something
+
+
+def make_scaled_modfunc_and_grad(
+        theta,
+        y_min,
+        y_max,
+        c_min,
+        c_max,
+        h=1.0,
+        padding_mode="zeros"):
+    alpha, beta = 0.2, 0.8
+    (W, b, w, mu) = theta
+    modfunc = make_model_function(
+        W.shape[2], h, W, b, w, mu, make_padding_function(
+            padding_mode, W.shape[0]))
+
+    def scaled_modfunc(Y):
+        # The padding functions do not like getting one dimensional input
+        # but we want to be able to use our model function as a function
+        # of a single vector, or a whole matrix of vector, so in case it's
+        # a vector, it is simply reshaped to a matrix with a single column
+        # or in the very special case its a single number, it is reshaped
+        # to a 1x1 matrix
+        if isinstance(Y, float):
+            Y = np.reshape(Y, (1, 1))
+        elif len(Y.shape) == 1:
+            Y = np.reshape(Y, (len(Y), 1))
+
+        # Scale the input
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+                                          * alpha + (Y - y_min) * beta)
+
+        # Compute the scaled output
+        c_scaled = modfunc(Y_scaled)
+
+        # Apply the inverse scaling to the output
+        c = 1 / (beta - alpha) * ((beta - c_scaled)
+                                  * c_min + (c_scaled - alpha) * c_max)
+
+        return c
+
+    # Gradient
+    def numerical_modfunc(Y):
+        dy = 1e-6
+        return np.array([((scaled_modfunc((y +
+                                           np.identity(len(y)) *
+                                           dy /
+                                           2).T) -
+                           scaled_modfunc((y -
+                                           np.identity(len(y)) *
+                                           dy /
+                                           2).T)) /
+                          dy) for y in Y.T]).T
+
+    return scaled_modfunc, numerical_modfunc
+
 
 def train_ANN_and_make_model_function(
         Y,
@@ -538,30 +594,33 @@ def train_ANN_and_make_model_function(
 
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
 
-    def scaled_modfunc(Y):
-        # The padding functions do not like getting one dimensional input
-        # but we want to be able to use our model function as a function
-        # of a single vector, or a whole matrix of vector, so in case it's
-        # a vector, it is simply reshaped to a matrix with a single column
-        # or in the very special case its a single number, it is reshaped
-        # to a 1x1 matrix
-        if isinstance(Y, float):
-            Y = np.reshape(Y, (1, 1))
-        elif len(Y.shape) == 1:
-            Y = np.reshape(Y, (len(Y), 1))
+    scaled_modfunc, numerical_modfunc = make_scaled_modfunc_and_grad(
+        (W, b, w, mu), y_min, y_max, c_min, c_max, h=h, padding_mode=padding_mode)
 
-        # Scale the input
-        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
-                                          * alpha + (Y - y_min) * beta)
+    # def scaled_modfunc(Y):
+    #     # The padding functions do not like getting one dimensional input
+    #     # but we want to be able to use our model function as a function
+    #     # of a single vector, or a whole matrix of vector, so in case it's
+    #     # a vector, it is simply reshaped to a matrix with a single column
+    #     # or in the very special case its a single number, it is reshaped
+    #     # to a 1x1 matrix
+    #     if isinstance(Y, float):
+    #         Y = np.reshape(Y, (1, 1))
+    #     elif len(Y.shape) == 1:
+    #         Y = np.reshape(Y, (len(Y), 1))
 
-        # Compute the scaled output
-        c_scaled = modfunc(Y_scaled)
+    #     # Scale the input
+    #     Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+    #                                       * alpha + (Y - y_min) * beta)
 
-        # Apply the inverse scaling to the output
-        c = 1 / (beta - alpha) * ((beta - c_scaled)
-                                  * c_min + (c_scaled - alpha) * c_max)
+    #     # Compute the scaled output
+    #     c_scaled = modfunc(Y_scaled)
 
-        return c
+    #     # Apply the inverse scaling to the output
+    #     c = 1 / (beta - alpha) * ((beta - c_scaled)
+    #                               * c_min + (c_scaled - alpha) * c_max)
+
+    #     return c
 
     def gradient_modfunc(Y):
         # The padding functions do not like getting one dimensional input
@@ -590,17 +649,17 @@ def train_ANN_and_make_model_function(
 
         return dc
 
-    def numerical_modfunc(Y):
-        dy = 1e-6
-        return np.array([((scaled_modfunc((y +
-                                           np.identity(len(y)) *
-                                           dy /
-                                           2).T) -
-                           scaled_modfunc((y -
-                                           np.identity(len(y)) *
-                                           dy /
-                                           2).T)) /
-                          dy) for y in Y.T]).T
+    # def numerical_modfunc(Y):
+    #     dy = 1e-6
+    #     return np.array([((scaled_modfunc((y +
+    #                                        np.identity(len(y)) *
+    #                                        dy /
+    #                                        2).T) -
+    #                        scaled_modfunc((y -
+    #                                        np.identity(len(y)) *
+    #                                        dy /
+    #                                        2).T)) /
+    #                       dy) for y in Y.T]).T
 
     # Return the scaled model function and the evolution of the
     # objective function for analisys
