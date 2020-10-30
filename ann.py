@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
+from time import time
 
 from support import concatflat, reconstruct_flat
 
@@ -340,7 +343,8 @@ def getGradANN(Y, h, W, b, w, mu):
     # acc starts as grad(eta(ZK.T @ w + mu))
 
     for k in range(K, 0, -1):
-        dphi = h * sigPr(((W[:, :, k - 1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
+        dphi = h * \
+            sigPr(((W[:, :, k - 1] @ Zs[:, :, k - 1]).T + b[:, k - 1]).T)
         acc = acc + (W[:, :, k - 1].T @ (dphi * acc))
 
     return acc  # acc is now grad_y(F) for (F is ANN)
@@ -364,7 +368,8 @@ def trainANN(
         tol,
         tau=None,
         descent_mode="gradient",
-        log=False):
+        log=False,
+        theta=None):
     '''Trains a ResNet ANN within the given parameters
 
     Input:
@@ -387,10 +392,19 @@ def trainANN(
         raise Exception("Input must be padded")
 
     # Initialization
-    W = np.random.uniform(size=(d, d, K))
-    b = np.random.uniform(size=(d, K))
-    w = np.random.uniform(size=(d, 1))
-    mu = np.random.uniform(size=(1, 1))
+
+    if theta is None:
+        W = np.random.uniform(size=(d, d, K))
+        b = np.random.uniform(size=(d, K))
+        w = np.random.uniform(size=(d, 1))
+        mu = np.random.uniform(size=(1, 1))
+    else:
+        (W, b, w, mu) = theta
+
+    # W = np.ones((d, d, K)) * 0.5
+    # b = np.ones((d, K)) * 0.5
+    # w = np.ones((d, 1)) * 0.5
+    # mu = np.ones((1, 1)) * 0.5
 
     if descent_mode == "gradient":
         if tau is None:
@@ -408,6 +422,15 @@ def trainANN(
     J = np.inf
     Js = []
 
+    t = time()
+
+    if isinstance(log, str):
+        with open(log, "w") as file:
+            file.write("Starting log:\n")
+
+    best_theta = None
+    best_J = None
+
     while it < it_max and J > tol:
 
         # Computing Z's in the forward sweep
@@ -420,6 +443,10 @@ def trainANN(
         Yc = (Ups.T - c).T
         J = .5 * np.linalg.norm(Yc) ** 2
         Js.append(J)
+
+        if best_J is None or J < best_J:
+            best_theta = (W, b, w, mu)
+            best_J = J
 
         # Preparing for back-propagation, getting PK = dJ/dZK
         PK = getPK(Yc, Zs[:, :, -1], w, mu)
@@ -439,13 +466,77 @@ def trainANN(
         # Another iteration complete!
         it += 1
 
-        if log:
-            print(f"{it} / {it_max}, order of error: {np.log(J):.3f}")
+        if (log) and (time() - t) > 10:
+            t += 10
+            message = f"{it} / {it_max}: {it / it_max * 100:.1f}%, order of error: {np.log10(J):.3f}"
+            if isinstance(log, str):
+                with open(log, "a") as file:
+                    file.write(message)
+                    file.write("\n")
+            else:
+                print(message)
 
+    # return (*best_theta, Js)
     return (W, b, w, mu, Js)
 
 
 # TODO: Make better name or something
+
+
+def make_scaled_modfunc_and_grad(
+        theta,
+        y_min,
+        y_max,
+        c_min,
+        c_max,
+        h=1.0,
+        padding_mode="zeros"):
+    alpha, beta = 0.2, 0.8
+    (W, b, w, mu) = theta
+    modfunc = make_model_function(
+        W.shape[2], h, W, b, w, mu, make_padding_function(
+            padding_mode, W.shape[0]))
+
+    def scaled_modfunc(Y):
+        # The padding functions do not like getting one dimensional input
+        # but we want to be able to use our model function as a function
+        # of a single vector, or a whole matrix of vector, so in case it's
+        # a vector, it is simply reshaped to a matrix with a single column
+        # or in the very special case its a single number, it is reshaped
+        # to a 1x1 matrix
+        if isinstance(Y, float):
+            Y = np.reshape(Y, (1, 1))
+        elif len(Y.shape) == 1:
+            Y = np.reshape(Y, (len(Y), 1))
+
+        # Scale the input
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+                                          * alpha + (Y - y_min) * beta)
+
+        # Compute the scaled output
+        c_scaled = modfunc(Y_scaled)
+
+        # Apply the inverse scaling to the output
+        c = 1 / (beta - alpha) * ((beta - c_scaled)
+                                  * c_min + (c_scaled - alpha) * c_max)
+
+        return c
+
+    # Gradient
+    def numerical_modfunc(Y):
+        dy = 1e-6
+        return np.array([((scaled_modfunc((y +
+                                           np.identity(len(y)) *
+                                           dy /
+                                           2).T) -
+                           scaled_modfunc((y -
+                                           np.identity(len(y)) *
+                                           dy /
+                                           2).T)) /
+                          dy) for y in Y.T]).T
+
+    return scaled_modfunc, numerical_modfunc
+
 
 def train_ANN_and_make_model_function(
         Y,
@@ -460,7 +551,12 @@ def train_ANN_and_make_model_function(
         padding_mode="zeros",
         activation_function=(sigma, sigPr),
         hypothesis_function=(eta, etaPr),
-        log=False):
+        log=False,
+        theta=None,
+        y_min=None,
+        y_max=None,
+        c_min=None,
+        c_max=None):
     '''Performs training of a ResNet ANN and wraps functions around both
     the function approximator and gradient for ease of use.
 
@@ -481,13 +577,6 @@ def train_ANN_and_make_model_function(
         Js: errors from each iteration (useful for gauging effectiveness)
     '''
     # TODO:
-    # - scale input Y
-    # - scale output c
-    # - train network on scaled values
-    # - make model function
-    # - make scaled model function where inputs are scaled by the same
-    # factors as the training input, then the model function is called,
-    # then the output is inversly scaled with the factors used to scale c
     # - make everything be able to take the activation and hypothesis
     # functions as parameters
 
@@ -496,14 +585,16 @@ def train_ANN_and_make_model_function(
 
     # Save the min and max y values for scaling both the training data
     # and the input of the resulting model function
-    y_min, y_max = np.min(Y), np.max(Y)
+    if y_min is None:
+        y_min, y_max = np.min(Y), np.max(Y)
 
     # Scale the training data input
     Y = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
 
     # Save the min and max training output data for scaling the training data
     # and inverse scaling the output of the model function
-    c_min, c_max = np.min(c), np.max(c)
+    if c_min is None:
+        c_min, c_max = np.min(c), np.max(c)
 
     # Scale the training data output
     c = 1 / (c_max - c_min) * ((c_max - c) * alpha + (c - c_min) * beta)
@@ -516,20 +607,19 @@ def train_ANN_and_make_model_function(
         Y = pad_func(Y)
     elif d0 > d:
         raise Exception(
-            "Dimension of input is larger than"
-            + " dimension of neural net!")
+            "Dimension of input is larger than" +
+            " dimension of neural net!")
     else:
         def identity(y):
             return y
         pad_func = identity
 
-    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c,
-                                 it_max, tol, tau=tau,
-                                 descent_mode=descent_mode, log=log)
+    (W, b, w, mu, Js) = trainANN(d, K, h, Y, c, it_max, tol,
+                                 tau=tau, descent_mode=descent_mode, log=log,
+                                 theta=theta)
 
     modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
 
-    def scaled_modfunc(Y):
         '''Function representation of the ANN as function approximator
         
         Input:
@@ -537,28 +627,33 @@ def train_ANN_and_make_model_function(
         Output:
             ups: output values approximate to exact values
         '''
-        # The padding functions do not like getting one dimensional input
-        # but we want to be able to use our model function as a function
-        # of a single vector, or a whole matrix of vector, so in case it's
-        # a vector, it is simply reshaped to a matrix with a single column
-        # or in the very special case its a single number, it is reshaped
-        # to a 1x1 matrix
-        if isinstance(Y, float):
-            Y = np.reshape(Y, (1, 1))
-        elif len(Y.shape) == 1:
-            Y = np.reshape(Y, (len(Y), 1))
+    scaled_modfunc, numerical_modfunc = make_scaled_modfunc_and_grad(
+        (W, b, w, mu), y_min, y_max, c_min, c_max, h=h, padding_mode=padding_mode)
 
-        # Scale the input
-        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+    # def scaled_modfunc(Y):
+    #     # The padding functions do not like getting one dimensional input
+    #     # but we want to be able to use our model function as a function
+    #     # of a single vector, or a whole matrix of vector, so in case it's
+    #     # a vector, it is simply reshaped to a matrix with a single column
+    #     # or in the very special case its a single number, it is reshaped
+    #     # to a 1x1 matrix
+    #     if isinstance(Y, float):
+    #         Y = np.reshape(Y, (1, 1))
+    #     elif len(Y.shape) == 1:
+    #         Y = np.reshape(Y, (len(Y), 1))
 
-        # Compute the scaled output
-        ups_scaled = modfunc(Y_scaled)
+    #     # Scale the input
+    #     Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+    #                                       * alpha + (Y - y_min) * beta)
 
-        # Apply the inverse scaling to the output
-        ups = 1 / (beta - alpha) * ((beta - c_scaled)
-                                  * c_min + (c_scaled - alpha) * c_max)
+    #     # Compute the scaled output
+    #     c_scaled = modfunc(Y_scaled)
 
-        return ups
+    #     # Apply the inverse scaling to the output
+    #     c = 1 / (beta - alpha) * ((beta - c_scaled)
+    #                               * c_min + (c_scaled - alpha) * c_max)
+
+    #     return c
 
     def gradient_modfunc(Y):
         '''Function representation of the gradient of the ANN
@@ -582,7 +677,8 @@ def train_ANN_and_make_model_function(
 
         Y = pad_func(Y)
 
-        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y) * alpha + (Y - y_min) * beta)
+        Y_scaled = 1 / (y_max - y_min) * ((y_max - Y)
+                                          * alpha + (Y - y_min) * beta)
 
         # gradent of the scaled c with respect to the scaled input Y
         dups_scaled_scaled = getGradANN(Y_scaled, h, W, b, w, mu)
@@ -594,6 +690,18 @@ def train_ANN_and_make_model_function(
 
         return dups
 
+    # def numerical_modfunc(Y):
+    #     dy = 1e-6
+    #     return np.array([((scaled_modfunc((y +
+    #                                        np.identity(len(y)) *
+    #                                        dy /
+    #                                        2).T) -
+    #                        scaled_modfunc((y -
+    #                                        np.identity(len(y)) *
+    #                                        dy /
+    #                                        2).T)) /
+    #                       dy) for y in Y.T]).T
+
     # Return the scaled model function and the evolution of the
     # objective function for analisys
-    return (scaled_modfunc, gradient_modfunc, Js)
+    return (scaled_modfunc, numerical_modfunc, Js, (W, b, w, mu))
