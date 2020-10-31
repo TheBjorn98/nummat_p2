@@ -78,7 +78,7 @@ d, K, h, tau = 4, 4, 1, .1
 it_max, tol = 10000, 1e-4
 
 (_, _, Js, theta) = ann.train_ANN_and_make_model_function(
-    Y, c, d, K, h, it_max, tol, 
+    Y, c, d, K, h, it_max, tol,
     tau=tau, y_min=y_min, y_max=y_max, c_min=c_min, c_max=c_max)
 
 (F, dF) = ann.make_scaled_modfunc_and_grad(
@@ -193,7 +193,7 @@ d, K, h, tau = 4, 4, 1, .05
 it_max, tol = 5000, 1e-4
 
 (_, _, Js1, theta1) = ann.train_ANN_and_make_model_function(
-    Y1, c1, d, K, h, it_max, tol, tau=tau, 
+    Y1, c1, d, K, h, it_max, tol, tau=tau,
     y_min=y0, y_max=yf, c_min=c0, c_max=cf)
 
 (F1, dF1) = ann.make_scaled_modfunc_and_grad(
