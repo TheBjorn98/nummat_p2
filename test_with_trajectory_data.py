@@ -1,7 +1,7 @@
 import numpy as np
 import ann
 import matplotlib.pyplot as plt
-
+import pickle
 import get_traj_data
 
 all_data = get_traj_data.concatenate(0, 50)
@@ -11,8 +11,6 @@ V_min, V_max = np.min(all_data["V"]), np.max(all_data["V"])
 
 P_min, P_max = np.min(all_data["P"]), np.max(all_data["P"])
 T_min, T_max = np.min(all_data["T"]), np.max(all_data["T"])
-
-import pickle
 
 with open("test_pickles/theta_T.pickle", "rb") as file:
     theta_T = pickle.load(file)

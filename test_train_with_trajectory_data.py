@@ -1,8 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import ann
 import get_traj_data
-import pickle
+# import matplotlib.pyplot as plt
+# import pickle
 
 first_set = get_traj_data.concatenate(0, 1)
 
@@ -16,11 +16,11 @@ d, K, h, tau = 4, 4, 1, .01
 it_max, tol = 1000, 1e-4
 
 (V, dV, JsV, theta_V) = ann.train_ANN_and_make_model_function(
-    first_set["Q"], first_set["V"], d, K, h, it_max, tol, tau = tau,
-    y_min = Q_min, y_max = Q_max, c_min = V_min, c_max = V_max, log=True)
+    first_set["Q"], first_set["V"], d, K, h, it_max, tol, tau=tau,
+    y_min=Q_min, y_max=Q_max, c_min=V_min, c_max=V_max, log=True)
 
 (T, dT, JsT, theta_T) = ann.train_ANN_and_make_model_function(
-    first_set["P"], first_set["T"], d, K, h, it_max, tol, tau = tau,
-    y_min = P_min, y_max = P_max, c_min = T_min, c_max = T_max, log=True)
+    first_set["P"], first_set["T"], d, K, h, it_max, tol, tau=tau,
+    y_min=P_min, y_max=P_max, c_min=T_min, c_max=T_max, log=True)
 
 # theta_V and theta_T can now be pickled

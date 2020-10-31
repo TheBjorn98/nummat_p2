@@ -3,11 +3,14 @@ import matplotlib.pyplot as plt
 import ann
 import pickle
 
+
 def Fe(y):
     return 1 - np.cos(y)
 
+
 def dFe(y):
     return np.sin(y)
+
 
 n = 11
 y_rng = np.pi / 1.5
@@ -24,7 +27,7 @@ d, K, h, tau = 4, 4, 1, .05
 it_max, tol = 5000, 1e-4
 
 (_, _, Js1, theta1) = ann.train_ANN_and_make_model_function(
-    Y1, c1, d, K, h, it_max, tol, tau=tau, 
+    Y1, c1, d, K, h, it_max, tol, tau=tau,
     y_min=y0, y_max=yf, c_min=c0, c_max=cf)
 
 (F1, dF1) = ann.make_scaled_modfunc_and_grad(

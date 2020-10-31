@@ -3,11 +3,14 @@ import matplotlib.pyplot as plt
 import itertools
 import ann
 
+
 def F_exact(y):
-    return 1/2 * np.linalg.norm(y)**2
+    return 1 / 2 * np.linalg.norm(y)**2
+
 
 def dF_exact(y):
     return np.array([y[0], y[1]]) * np.linalg.norm(y)
+
 
 n, y_min, y_max = 5, 0, 1
 _Y = np.linspace((y_min, y_min), (y_max, y_max), n).T
@@ -20,7 +23,7 @@ d, K, h, tau = 4, 4, 1, .1
 it_max, tol = 10000, 1e-4
 
 (_, _, Js, theta) = ann.train_ANN_and_make_model_function(
-    Y, c, d, K, h, it_max, tol, tau=tau, 
+    Y, c, d, K, h, it_max, tol, tau=tau,
     y_min=y_min, y_max=y_max, c_min=c_min, c_max=c_max)
 
 (F, dF) = ann.make_scaled_modfunc_and_grad(
