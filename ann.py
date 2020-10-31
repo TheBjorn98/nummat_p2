@@ -38,13 +38,16 @@ def etaPr(x):
 
 def make_padding_function(paddingmode, d):
     '''
-    Returns function which pads the input data as to embedd it in a larger vectorspace.
+    Returns function which pads the input data as to embedd it in a larger
+    vectorspace.
 
     zeros: Appends zeros until d is reached
         [1, 2] -> [1, 2, 0, 0]
-    tiling: Appends the vector itself until d is reached, superfluous elements are dropped
+    tiling: Appends the vector itself until d is reached, superfluous elements
+    are dropped
         [1, 2] -> [1, 2, 1, 2]
-    repeat: Appends elementwise so the first element is repeated a number of times, and so on
+    repeat: Appends elementwise so the first element is repeated a number of
+    times, and so on
         [1, 2] -> [1, 1, 2, 2]
     '''
     if paddingmode == "zeros":
@@ -376,7 +379,7 @@ def trainANN(
         h:   stepsize for emphazising internal layers in the model
         Y: d0xI matrix with input data, must be scaled beforehand
         c: I-vector of exact data for evaluating performance
-        it_max: sets a ceiling for compute time, maximal number of training rounds
+        it_max: maximal number of training rounds, ceiling for training time
         tol: error tolerance, when error dips below, model is done training
         tau: learning parameter declaring how much of the gradient is included
         descent_mode: "gradient" or "adam"
@@ -466,7 +469,8 @@ def trainANN(
 
         if (log) and (time() - t) > 10:
             t += 10
-            message = f"{it} / {it_max}: {it / it_max * 100:.1f}%, order of error: {np.log10(J):.3f}"
+            message = f"{it} / {it_max}: {it / it_max * 100:.1f}%, \
+                        order of error: {np.log10(J):.3f}"
             if isinstance(log, str):
                 with open(log, "a") as file:
                     file.write(message)
@@ -633,7 +637,8 @@ def train_ANN_and_make_model_function(
     # modfunc = make_model_function(K, h, W, b, w, mu, pad_func)
 
     scaled_modfunc, numerical_modfunc = make_scaled_modfunc_and_grad(
-        (W, b, w, mu), y_min, y_max, c_min, c_max, h=h, padding_mode=padding_mode)
+        (W, b, w, mu), y_min, y_max, c_min, c_max, h=h,
+        padding_mode=padding_mode)
 
     # def scaled_modfunc(Y):
     #     # The padding functions do not like getting one dimensional input
