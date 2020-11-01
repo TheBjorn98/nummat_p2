@@ -1,7 +1,7 @@
 import csv
-from ast import literal_eval
-import re
 import numpy as np
+# from ast import literal_eval
+# import re
 
 """
 Both of the following functions import data. The output of both functions are
@@ -80,8 +80,8 @@ def concatenate(batchmin=0, batchmax=50):
 
     Input:
     1. `batchmin`: the lowest filenumber to be loaded
-    2. `batchmax`: the highest filenumber, which will not be loaded as the range
-        is exclusive of the final number
+    2. `batchmax`: the highest filenumber, which will not be loaded as the
+        range is exclusive of the final number
 
     Output:
     1. Dictionary containing the loaded data
