@@ -131,5 +131,6 @@ dmypy.json
 # Other stuff
 log.txt
 /.vscode
+tmp.tex
 idun_files
 local_parallell
