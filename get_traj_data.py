@@ -30,7 +30,22 @@ start_path.
 
 
 def generate_data(batch=0):
+    '''
+    Fetches data from a single .csv file.
+    File must be in the `project_2_trajectories` folder with the name
+    `datalist_batch_i.csv` where i is the appropriate trajectory number.
 
+    Input:
+    1. `batch`: the file number, i, to be loaded
+
+    Output:
+    1. Dictionary containing the loaded data
+        * `t`: time data for the trajectory
+        * `Q`: generalized positions for the particle
+        * `P`: momentums of the particle
+        * `T`: kinetic energies of the particle
+        * `V`: potential energies of the particle
+    '''
     start_path = ""
     path = start_path + "project_2_trajectories/datalist_batch_" + \
         str(batch) + ".csv"
@@ -58,6 +73,24 @@ def generate_data(batch=0):
 
 
 def concatenate(batchmin=0, batchmax=50):
+    '''
+    Fetches data from a range of .csv files.
+    Files must be in the `project_2_trajectories` folder with the name
+    `datalist_batch_i.csv` where i is the appropriate trajectory numbers.
+
+    Input:
+    1. `batchmin`: the lowest filenumber to be loaded
+    2. `batchmax`: the highest filenumber, which will not be loaded as the range
+        is exclusive of the final number
+
+    Output:
+    1. Dictionary containing the loaded data
+        * `t`: time data for the trajectory
+        * `Q`: generalized positions for the particle
+        * `P`: momentums of the particle
+        * `T`: kinetic energies of the particle
+        * `V`: potential energies of the particle
+    '''
     dictlist = []
     for i in range(batchmin, batchmax):
         dictlist.append(generate_data(batch=i))
@@ -76,6 +109,20 @@ def concatenate(batchmin=0, batchmax=50):
 
 
 def get_data_bounds():
+    '''
+    Returns the global min/max values of the datasets found in
+    `project_2_trajectory` folder. This function relies on the
+    `concatenate` function in `get_traj_data.py`.
+
+    Input:
+    1. Nothing, this function is absolutely impure
+
+    Output:
+    1. `qmin, qmax`: min/max values for q
+    2. `vmin, vmax`: min/max values for V
+    3. `pmin, pmax`: min/max values for p
+    4. `tmin, tmax`: min/max values for T
+    '''
     data = concatenate(0, 50)
 
     qmin, qmax = np.min(data["Q"]), np.max(data["Q"])
