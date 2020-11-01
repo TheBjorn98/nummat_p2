@@ -32,7 +32,7 @@ start_path.
 def generate_data(batch=0):
     '''
     Fetches data from a single .csv file.
-    File must be in the `project_2_trajectories` folder with the name
+    File must be in the `project_2_trajectories_new` folder with the name
     `datalist_batch_i.csv` where i is the appropriate trajectory number.
 
     Input:
@@ -47,7 +47,7 @@ def generate_data(batch=0):
         * `V`: potential energies of the particle
     '''
     start_path = ""
-    path = start_path + "project_2_trajectories/datalist_batch_" + \
+    path = start_path + "project_2_trajectories_new/datalist_batch_" + \
         str(batch) + ".csv"
     with open(path, newline="\n") as file:
         reader = csv.reader(file)
@@ -75,7 +75,7 @@ def generate_data(batch=0):
 def concatenate(batchmin=0, batchmax=50):
     '''
     Fetches data from a range of .csv files.
-    Files must be in the `project_2_trajectories` folder with the name
+    Files must be in the `project_2_trajectories_new` folder with the name
     `datalist_batch_i.csv` where i is the appropriate trajectory numbers.
 
     Input:
@@ -111,7 +111,7 @@ def concatenate(batchmin=0, batchmax=50):
 def get_data_bounds():
     '''
     Returns the global min/max values of the datasets found in
-    `project_2_trajectory` folder. This function relies on the
+    `project_2_trajectories_new` folder. This function relies on the
     `concatenate` function in `get_traj_data.py`.
 
     Input:
