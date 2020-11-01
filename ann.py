@@ -5,6 +5,8 @@ from time import time
 
 from support import concatflat, reconstruct_flat
 
+import os
+
 # Script defining the necessary functions for the ANN
 
 # TODO: add sig, sigPr, eta and etaPr as inputs to functions
@@ -409,6 +411,7 @@ def trainANN(
     Js = []
 
     t = time()
+    t2 = time()
 
     if isinstance(log, str):
         with open(log, "w") as file:
@@ -416,8 +419,12 @@ def trainANN(
 
     best_theta = None
     best_J = None
-
-    while it < it_max and J > tol:
+    
+    safeword = False
+    
+    # As a way to stop the training if it takes too long,
+    # you can make a file called "Safeword" to stop the training.
+    while it < it_max and J > tol and not safeword:
 
         # Computing Z's in the forward sweep
         Zs = getZ(Y, K, h, W, b)
@@ -461,6 +468,10 @@ def trainANN(
                     file.write("\n")
             else:
                 print(message)
+        
+        if (time() - t2) > 1:
+            t2 += 1
+            safeword = os.path.exists("Safeword")
 
     # return (*best_theta, Js)
     return (W, b, w, mu, Js)

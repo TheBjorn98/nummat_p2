@@ -25,7 +25,7 @@ some other location, the path for this location can be put into the string start
 def generate_data(batch=0):
 
     start_path = ""
-    path = start_path + "project_2_trajectories/datalist_batch_" + \
+    path = start_path + "project_2_trajectories_new/datalist_batch_" + \
         str(batch) + ".csv"
     with open(path, newline="\n") as file:
         reader = csv.reader(file)

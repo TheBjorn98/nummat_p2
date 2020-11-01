@@ -1,8 +1,0 @@
-took 375.00 seconds to train
-J = 39.70879750140611
-took 474.96 seconds to train
-J = 40.01926269843508
-took 462.90 seconds to train
-J = 38.92162275590478
-took 472.65 seconds to train
-J = 41.2143821338145
