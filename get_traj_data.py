@@ -2,23 +2,30 @@ import csv
 from ast import literal_eval
 import re
 import numpy as np
+
 """
-Both of the following functions import data. The output of both functions are a dictionary containing 5 arrays
+Both of the following functions import data. The output of both functions are
+a dictionary containing 5 arrays
     t: the array of av time points
     Q: the position values (q)
     P: the momentum values (p)
     T: the kinetic energy
     V: the potential energy
 
-The data files contain data from 50 different trajectories, i.e. simulation of the path for a point with some
+The data files contain data from 50 different trajectories, i.e. simulation of
+the path for a point with some
 initial position q0 and momentum p0.
 
-The function generate_data gives you the data from one of these data files, while the function concatenate
-gives you the data from multiple trajectories at once. The default arguments of concatenate give you all the data
+The function generate_data gives you the data from one of these data files,
+while the function concatenate
+gives you the data from multiple trajectories at once. The default arguments
+of concatenate give you all the data
 alltogether.
 
-The folder project_2_trajectories must be placed in the same folder as your program to work. If the folder is in
-some other location, the path for this location can be put into the string start_path.
+The folder project_2_trajectories must be placed in the same folder as your
+program to work. If the folder is in
+some other location, the path for this location can be put into the string
+start_path.
 """
 
 
@@ -66,3 +73,15 @@ def concatenate(batchmin=0, batchmax=50):
         V0 = np.hstack((V0, dictlist[j + 1]["V"]))
         tlist = np.hstack((tlist, dictlist[j + 1]["t"]))
     return {"t": tlist, "Q": Q_data, "P": P_data, "T": T0, "V": V0}
+
+
+def get_data_bounds():
+    data = concatenate(0, 50)
+
+    qmin, qmax = np.min(data["Q"]), np.max(data["Q"])
+    vmin, vmax = np.min(data["V"]), np.max(data["V"])
+
+    pmin, pmax = np.min(data["P"]), np.max(data["P"])
+    tmin, tmax = np.min(data["T"]), np.max(data["T"])
+
+    return (qmin, qmax, vmin, vmax, pmin, pmax, tmin, tmax)
