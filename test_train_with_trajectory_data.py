@@ -1,10 +1,10 @@
 import numpy as np
 import ann
-import get_traj_data
+import get_traj_data as gtd
 # import matplotlib.pyplot as plt
 # import pickle
 
-first_set = get_traj_data.concatenate(0, 1)
+first_set = gtd.concatenate(0, 1)
 
 Q_min, Q_max = np.min(first_set["Q"]), np.max(first_set["Q"])
 V_min, V_max = np.min(first_set["V"]), np.max(first_set["V"])

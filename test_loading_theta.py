@@ -2,9 +2,9 @@ import numpy as np
 import ann
 import matplotlib.pyplot as plt
 import pickle
-import get_traj_data
+import get_traj_data as gtd
 
-all_data = get_traj_data.concatenate(0, 50)
+all_data = gtd.concatenate(0, 50)
 
 Q_min = np.min(all_data["Q"])
 Q_max = np.max(all_data["Q"])

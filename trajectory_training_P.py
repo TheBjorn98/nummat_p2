@@ -1,5 +1,5 @@
 from time import time
-import get_traj_data
+import get_traj_data as gtd
 
 import ann
 
@@ -13,7 +13,7 @@ import subprocess
 import os
 
 
-all_data = get_traj_data.concatenate(0, 50)
+all_data = gtd.concatenate(0, 50)
 
 P_min = np.min(all_data["P"])
 P_max = np.max(all_data["P"])
@@ -54,7 +54,7 @@ foldername = "T_trained_4x4"
 
 def startup():
     subprocess.call(f"mkdir results/{foldername}", shell=True)
-    batch_data = get_traj_data.generate_data(batch=0)
+    batch_data = gtd.generate_data(batch=0)
     os.chdir(f"results/{foldername}")
     Y = batch_data["P"][:, :1000]
     c = batch_data["T"][:1000]
@@ -73,7 +73,7 @@ def resume():
 
     for i in range(0, 25):
         os.chdir("../..")
-        batch_data = get_traj_data.generate_data(batch=i)
+        batch_data = gtd.generate_data(batch=i)
         os.chdir(f"results/{foldername}")
         Y = batch_data["P"]
         c = batch_data["T"]
@@ -91,7 +91,7 @@ def resume_with_big_data(lo, hi, plot_index=0):
         theta = pickle.load(file)
 
     os.chdir("../..")
-    batch_data = get_traj_data.concatenate(lo, hi)
+    batch_data = gtd.concatenate(lo, hi)
     os.chdir(f"results/{foldername}")
 
     Y = batch_data["P"]
