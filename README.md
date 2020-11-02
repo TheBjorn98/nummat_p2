@@ -17,7 +17,7 @@ Due to lacking abilities of precognition, the ANN training function returns
 functions which can be used as the approximator and gradient of the approximator.
 However, these are relics of simpler times and should not be used.
 
-Since the training function returns theta (or the tuple `(w, b, w, mu)`),
+Since the training function returns theta (or the tuple `(W, b, w, mu)`),
 training can be resumed and performed on alternative data. The returned
 functions are to be disregarded. Instead, theta should be inputted to the
 `make_scaled_modfunc_and_grad` function, which will return virtually the same
