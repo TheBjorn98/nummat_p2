@@ -3,8 +3,7 @@ title: ReadMe for project 2 in numerical mathematics
 date: 30.10.2020
 ---
 
-Link to the project report:
-<https://www.overleaf.com/read/qhrgbpwxfkrj>
+<!-- TODO: add list of files for them to test and where to find them. mystical codes and where to find them -->
 
 ## Training the ANN and getting the approximator and gradient
 
