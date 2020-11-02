@@ -27,7 +27,7 @@ def intMeth(p0, q0, dTdp, dVdq, it_max, tol, func, step):
     4. dVdq: potential part of the hamiltonian diffed wrt. position
     5. it_max: number of steps the method will perform
     6. tol: unused parameter, disregard
-    7. func: integrator method to be used, Euler or Strømer-Verlet
+    7. func: integrator method to be used, Euler or Størmer-Verlet
     8. step: stepsize in time for the integrator method
 
     Outputs:

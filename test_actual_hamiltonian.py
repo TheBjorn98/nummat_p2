@@ -87,7 +87,7 @@ if __name__ == "__main__":
         strVerT = T(strPs)
         strH = strVerV + strVerT
         t8 = time.time()
-        print(f"Integrated with Strømer-Verlet in {t8 - t7:.3f} s")
+        print(f"Integrated with Størmer-Verlet in {t8 - t7:.3f} s")
         strQNorm = np.array([np.linalg.norm(y) for y in strQs.T])
 
     trueQNorm = np.array([np.linalg.norm(y) for y in Qs.T])
@@ -105,7 +105,7 @@ if __name__ == "__main__":
         if bEuler:
             plt.plot(intTime, eulerH, label="Euler Hamiltonian")
         if bStrVer:
-            plt.plot(intTime, strH, label="Strømer-Verlet Hamiltonian")
+            plt.plot(intTime, strH, label="Størmer-Verlet Hamiltonian")
         plt.legend(loc="best")
         plt.show()
     if bPlotPath:
@@ -113,6 +113,6 @@ if __name__ == "__main__":
         if bEuler:
             plt.plot(intTime, eulQNorm, label="Norm of Euler's Q")
         if bStrVer:
-            plt.plot(intTime, strQNorm, label="Norm of Strømer-Verlet's Q")
+            plt.plot(intTime, strQNorm, label="Norm of Størmer-Verlet's Q")
         plt.legend(loc="best")
         plt.show()

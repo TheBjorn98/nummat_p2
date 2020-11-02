@@ -60,18 +60,18 @@ if __name__ == "__main__":
 
     k = len(Qs.T)
     l = 2
-    off = 500
+    off = 0
     dt = 20 / (l * k - off)
     its = l * k - off
-    p0 = np.reshape(data["P"][:, off], (3, 1))
-    q0 = np.reshape(data["Q"][:, off], (3, 1))
+    p0 = np.reshape(Ps[:, off], (3, 1))
+    q0 = np.reshape(Qs[:, off], (3, 1))
 
     bEuler = True
-    bStrVer = False
+    bStrVer = True
 
     if bEuler:
         t6 = time.time()
-        eulPs, eulQs = im.intMeth(p0.T, q0.T, dT, dV, its, 1e-10, euler, dt)
+        eulPs, eulQs = im.intMeth(p0, q0, dT, dV, its, 1e-10, euler, dt)
         eulerV = V(eulQs)
         eulerT = T(eulPs)
         eulerH = eulerV + eulerT
@@ -81,12 +81,12 @@ if __name__ == "__main__":
 
     if bStrVer:
         t7 = time.time()
-        strPs, strQs = im.intMeth(p0.T, q0.T, dT, dV, its, 1e-10, strVer, dt)
+        strPs, strQs = im.intMeth(p0, q0, dT, dV, its, 1e-10, strVer, dt)
         strVerV = V(strQs)
         strVerT = T(strPs)
         strH = strVerV + strVerT
         t8 = time.time()
-        print(f"Integrated with Strømer-Verlet in {t8 - t7:.3f} s")
+        print(f"Integrated with Størmer-Verlet in {t8 - t7:.3f} s")
         strQNorm = np.array([np.linalg.norm(y) for y in strQs.T])
 
     trueQNorm = np.array([np.linalg.norm(y) for y in Qs.T])
@@ -104,7 +104,7 @@ if __name__ == "__main__":
         if bEuler:
             plt.plot(intTime, eulerH, label="Euler Hamiltonian")
         if bStrVer:
-            plt.plot(intTime, strH, label="Strømer-Verlet Hamiltonian")
+            plt.plot(intTime, strH, label="Størmer-Verlet Hamiltonian")
         plt.legend(loc="best")
         plt.show()
     if bPlotPath:
@@ -112,6 +112,6 @@ if __name__ == "__main__":
         if bEuler:
             plt.plot(intTime, eulQNorm, label="Norm of Euler's Q")
         if bStrVer:
-            plt.plot(intTime, strQNorm, label="Norm of Strømer-Verlet's Q")
+            plt.plot(intTime, strQNorm, label="Norm of Størmer-Verlet's Q")
         plt.legend(loc="best")
         plt.show()
