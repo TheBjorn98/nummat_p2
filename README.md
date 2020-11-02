@@ -1,9 +1,39 @@
 ---
 title: ReadMe for project 2 in numerical mathematics
 date: 30.10.2020
+geometry:
+- margin=20mm
+- paper=a4paper
 ---
 
-<!-- TODO: add list of files for them to test and where to find them. mystical codes and where to find them -->
+## List of files and functionality
+
+### Important Code
+
+1. `ann.py`
+	* File containing code related to the ANN.
+	* Forward sweep, back propagation, function approximator and gradient
+2. `support.py`
+	* Some support functionality for the ANN
+3. `intmethods.py`
+	* Numerical integrator code
+	* Functions for symplectic Euler and Størmer-Verlet
+
+### Testing code
+
+1. `test_training_ann.py`
+	* Test of how to train ANN for a 1d function
+2. `test_loading_theta.py`
+	* Showcasing how to load from a pickled theta and construct functions from it
+3. `test_resuming_training.py`
+	* Display of how to train ANN, pickle the result and unpickle to train some more
+4. `test_train_with_trajectory_data.py`
+	* Test which loads data from the .csv files and trains the ANN on them
+5. `test_with_trajectory_data.py`
+	* Test which loads previously trained thetas and uses them to find T and V
+6. `test_actual_hamiltonian.py`
+	* Demonstrating how to load previously trained theta, then use the gradients
+	to integrate with Euler or Størmer to get the actual path
 
 ## Training the ANN and getting the approximator and gradient
 

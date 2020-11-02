@@ -1,0 +1,385 @@
+<h2 id="list-of-files-and-functionality">List of files and functionality</h2>
+<h3 id="important-code">Important Code</h3>
+<ol type="1">
+<li><code>ann.py</code>
+<ul>
+<li>File containing code related to the ANN.</li>
+<li>Forward sweep, back propagation, function approximator and gradient</li>
+</ul></li>
+<li><code>support.py</code>
+<ul>
+<li>Some support functionality for the ANN</li>
+</ul></li>
+<li><code>intmethods.py</code>
+<ul>
+<li>Numerical integrator code</li>
+<li>Functions for symplectic Euler and Størmer-Verlet</li>
+</ul></li>
+</ol>
+<h3 id="testing-code">Testing code</h3>
+<ol type="1">
+<li><code>test_training_ann.py</code>
+<ul>
+<li>Test of how to train ANN for a 1d function</li>
+</ul></li>
+<li><code>test_loading_theta.py</code>
+<ul>
+<li>Showcasing how to load from a pickled theta and construct functions from it</li>
+</ul></li>
+<li><code>test_resuming_training.py</code>
+<ul>
+<li>Display of how to train ANN, pickle the result and unpickle to train some more</li>
+</ul></li>
+<li><code>test_train_with_trajectory_data.py</code>
+<ul>
+<li>Test which loads data from the .csv files and trains the ANN on them</li>
+</ul></li>
+<li><code>test_with_trajectory_data.py</code>
+<ul>
+<li>Test which loads previously trained thetas and uses them to find T and V</li>
+</ul></li>
+<li><code>test_actual_hamiltonian.py</code>
+<ul>
+<li>Demonstrating how to load previously trained theta, then use the gradients to integrate with Euler or Størmer to get the actual path</li>
+</ul></li>
+</ol>
+<h2 id="training-the-ann-and-getting-the-approximator-and-gradient">Training the ANN and getting the approximator and gradient</h2>
+<p>Training the ANN is done with the <code>train_ANN_and_make_model_function</code> function in <code>ann.py</code>. This function invokes the underlying <code>trainANN</code> function which performs the actual iteration and updating of theta.</p>
+<p>Due to lacking abilities of precognition, the ANN training function returns functions which can be used as the approximator and gradient of the approximator. However, these are relics of simpler times and should not be used.</p>
+<p>Since the training function returns theta (or the tuple <code>(W, b, w, mu)</code>), training can be resumed and performed on alternative data. The returned functions are to be disregarded. Instead, theta should be inputted to the <code>make_scaled_modfunc_and_grad</code> function, which will return virtually the same functions as the one returned from the training function.</p>
+<p>The reason for this convoluted way of things is that the <code>pickle</code> packages has some issues with storing functions to be loaded at a later time. If one seeks to resume the training or store the ANN for use as a function approximator (to circumvent retraining the ANN each time one needs it), it would be nice to be able to serialize the function, or at least the theta, to save it. Using <code>make_scaled_modfunc_and_grad</code> is therefore consideres best practice, as <code>pickle</code> cooperates better.</p>
+<p>A step-by-step guide to get the approximator and gradient can be the following:</p>
+<ol type="1">
+<li>Load all data <code>Y</code> and <code>c</code> for which the ANN should be trained</li>
+<li>Find the maximal and minimal values of the training data and exact data as to scale the ANN properly.</li>
+<li>Decide on some reasonable values for
+<ul>
+<li><code>d</code>, the dimension of the hidden layers</li>
+<li><code>K</code>, the number of hidden layers</li>
+<li><code>h</code>, the stepsize between layers</li>
+<li><code>it_max</code>, when to forcefully abort training</li>
+<li><code>tol</code>, the targetted error for which the training is considered complete</li>
+</ul></li>
+<li>Call <code>train_ANN_and_make_model_function</code> with these parameters.</li>
+<li>Decide what to do with the return values:
+<ul>
+<li><code>scaled_modfunc</code> can be disregarded</li>
+<li><code>gradient_modfunc</code> can also be disregarded</li>
+<li><code>Js</code> is the evolution of the error, which can be plotted to see the decline</li>
+<li><code>(W, b, w, mu)</code> is theta, this should definitely be kept as it <em>is</em> the ANN</li>
+</ul></li>
+<li>Pass theta and the min/max values to <code>make_scaled_modfunc_and_grad</code> to construct normal functions for the approximator and gradient.</li>
+</ol>
+<h3 id="example-of-usage-training-the-network-for-a-1d-function">Example of usage, training the network for a 1d function</h3>
+<p>Running the script <code>test_training_ann.py</code> performs this.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="im">import</span> itertools</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a><span class="im">import</span> ann</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a><span class="kw">def</span> F_exact(y):</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a>    <span class="cf">return</span> <span class="dv">1</span><span class="op">/</span><span class="dv">2</span> <span class="op">*</span> np.linalg.norm(y)<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true"></a><span class="kw">def</span> dF_exact(y):</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true"></a>    <span class="cf">return</span> np.array([y[<span class="dv">0</span>], y[<span class="dv">1</span>]]) <span class="op">*</span> np.linalg.norm(y)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true"></a>n, y_min, y_max <span class="op">=</span> <span class="dv">5</span>, <span class="dv">0</span>, <span class="dv">1</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true"></a>_Y <span class="op">=</span> np.linspace((y_min, y_min), (y_max, y_max), n).T</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true"></a>x, y <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="dv">1</span>, n), np.linspace(<span class="dv">0</span>, <span class="dv">1</span>, n)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true"></a>Y <span class="op">=</span> np.array(<span class="bu">list</span>(itertools.product(x, y))).T</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true"></a>c <span class="op">=</span> np.array([F_exact(Y[:, i]) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(np.shape(Y)[<span class="dv">1</span>])])</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true"></a>c_min, c_max <span class="op">=</span> np.<span class="bu">min</span>(c), np.<span class="bu">max</span>(c)</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true"></a>d, K, h, tau <span class="op">=</span> <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">1</span>, <span class="fl">.1</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true"></a>it_max, tol <span class="op">=</span> <span class="dv">10000</span>, <span class="fl">1e-4</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true"></a>(_, _, Js, theta) <span class="op">=</span> ann.train_ANN_and_make_model_function(</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true"></a>    Y, c, d, K, h, it_max, tol,</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true"></a>    tau<span class="op">=</span>tau, y_min<span class="op">=</span>y_min, y_max<span class="op">=</span>y_max, c_min<span class="op">=</span>c_min, c_max<span class="op">=</span>c_max)</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true"></a></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true"></a>(F, dF) <span class="op">=</span> ann.make_scaled_modfunc_and_grad(</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true"></a>    theta, y_min, y_max, c_min, c_max, h<span class="op">=</span>h)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true"></a></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true"></a>t <span class="op">=</span> <span class="dv">101</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true"></a>ys <span class="op">=</span> np.linspace((<span class="dv">0</span>, <span class="dv">0</span>), (<span class="dv">1</span>, <span class="dv">1</span>), t).T</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true"></a>cs <span class="op">=</span> np.array([F_exact(ys[:, i]) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(t)])</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true"></a>dcs <span class="op">=</span> np.array([dF_exact(ys[:, i]) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(t)])</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true"></a>Fs, dFs <span class="op">=</span> F(ys), dF(np.reshape(ys, (<span class="dv">2</span>, t)))</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true"></a></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true"></a>bErr, bFn, bdFn <span class="op">=</span> <span class="va">False</span>, <span class="va">False</span>, <span class="va">True</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true"></a></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true"></a><span class="cf">if</span> bErr:</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true"></a>    plt.plot(Js)</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true"></a>    plt.yscale(<span class="st">&quot;log&quot;</span>)</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true"></a>    plt.show()</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true"></a><span class="cf">if</span> bFn:</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true"></a>    plt.plot(cs)</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true"></a>    plt.plot(Fs)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true"></a>    plt.show()</span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true"></a><span class="cf">if</span> bdFn:</span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true"></a>    plt.plot(dcs[:, <span class="dv">0</span>], label<span class="op">=</span><span class="st">&quot;dF, 0-th component&quot;</span>)</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true"></a>    plt.plot(dcs[:, <span class="dv">1</span>], label<span class="op">=</span><span class="st">&quot;dF, 1-st component&quot;</span>)</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true"></a>    plt.plot(dFs[<span class="dv">0</span>, :], label<span class="op">=</span><span class="st">&quot;dF~, 0-th component&quot;</span>)</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true"></a>    plt.plot(dFs[<span class="dv">1</span>, :], label<span class="op">=</span><span class="st">&quot;dF~, 1-st component&quot;</span>)</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true"></a>    plt.legend(loc<span class="op">=</span><span class="st">&quot;best&quot;</span>)</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true"></a>    plt.show()</span></code></pre></div>
+<h3 id="example-of-usage-construction-from-existing-theta">Example of usage, construction from existing theta</h3>
+<p>Running the script <code>test_loading_theta.py</code> performs this.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="im">import</span> ann</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="im">import</span> get_traj_data</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a>all_data <span class="op">=</span> get_traj_data.concatenate(<span class="dv">0</span>, <span class="dv">50</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a>Q_min <span class="op">=</span> np.<span class="bu">min</span>(all_data[<span class="st">&quot;Q&quot;</span>])</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a>Q_max <span class="op">=</span> np.<span class="bu">max</span>(all_data[<span class="st">&quot;Q&quot;</span>])</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a>V_min <span class="op">=</span> np.<span class="bu">min</span>(all_data[<span class="st">&quot;V&quot;</span>])</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a>V_max <span class="op">=</span> np.<span class="bu">max</span>(all_data[<span class="st">&quot;V&quot;</span>])</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a><span class="im">import</span> pickle</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a><span class="co"># Remember to set a path to a valid theta.pickle</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">&quot;path/to/theta.pickle&quot;</span>, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true"></a>    theta <span class="op">=</span> pickle.load(<span class="bu">file</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true"></a>(V, dV) <span class="op">=</span> ann.make_scaled_modfunc_and_grad(theta, Q_min, Q_max, V_min, V_max)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true"></a>Qs, Vs <span class="op">=</span> all_data[<span class="st">&quot;Q&quot;</span>], all_data[<span class="st">&quot;V&quot;</span>]</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true"></a>V_ann <span class="op">=</span> V(Qs)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true"></a>k <span class="op">=</span> <span class="dv">10000</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true"></a>plt.plot(V_ann[<span class="dv">0</span>:k])  <span class="co"># Plotting the first k values of V from ANN</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true"></a>plt.plot(Vs[<span class="dv">0</span>:k])  <span class="co"># Plotting the first k values of V from traj_data</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true"></a>plt.show()</span></code></pre></div>
+<h2 id="continuing-the-training-of-an-ann">Continuing the training of an ANN</h2>
+<p>It is possible to resume the training of an ANN. Doing this requires that one sets the optional <code>theta</code> parameter when calling <code>train_ANN_and_make_model_function</code>. If training the ANN on different sets of data, it is important to pass correct max/min arguments in order to scale the ANN properly. Loading all datasets to find the global max/min values for the input and exact values and using these values as the scale range ensures that the ANN is scaled properly.</p>
+<p>Failing to provide these values forces the ANN to compute the max/min values from the given dataset. If max/min varies between datasets, these values are re-computed per dataset and the ANN has to train to approximate these new initial and terminal values.</p>
+<p>This is rather wasteful and gives a false indication of rate of convergence as the approximation to fit the new values happens very quickly.</p>
+<h3 id="example-of-training-resuming-and-saving-of-theta">Example of training resuming and saving of theta</h3>
+<p>Running the script <code>test_resume_training.py</code> performs this. But be warned that with the current settings, the training of the ANN is quite sensistive to the random initialization of theta and the results may vary wildly.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="im">import</span> ann</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="im">import</span> pickle</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a><span class="kw">def</span> Fe(y):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a>    <span class="cf">return</span> <span class="dv">1</span> <span class="op">-</span> np.cos(y)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a><span class="kw">def</span> dFe(y):</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true"></a>    <span class="cf">return</span> np.sin(y)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true"></a>n <span class="op">=</span> <span class="dv">11</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true"></a>y_rng <span class="op">=</span> np.pi <span class="op">/</span> <span class="fl">1.5</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true"></a>Y1 <span class="op">=</span> np.reshape(np.linspace(<span class="op">-</span>y_rng, <span class="fl">.5</span> <span class="op">*</span> y_rng, n), (<span class="dv">1</span>, n))</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true"></a>Y2 <span class="op">=</span> np.reshape(np.linspace(<span class="op">-</span><span class="fl">.5</span> <span class="op">*</span> y_rng, y_rng, n), (<span class="dv">1</span>, n))</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true"></a>y0 <span class="op">=</span> <span class="bu">min</span>(np.<span class="bu">min</span>(Y1), np.<span class="bu">min</span>(Y2))</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true"></a>yf <span class="op">=</span> <span class="bu">max</span>(np.<span class="bu">max</span>(Y1), np.<span class="bu">max</span>(Y2))</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true"></a>c1, c2 <span class="op">=</span> Fe(Y1), Fe(Y2)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true"></a>c0 <span class="op">=</span> <span class="bu">min</span>(np.<span class="bu">min</span>(c1), np.<span class="bu">min</span>(c2))</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true"></a>cf <span class="op">=</span> <span class="bu">max</span>(np.<span class="bu">max</span>(c1), np.<span class="bu">max</span>(c2))</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true"></a>d, K, h, tau <span class="op">=</span> <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">1</span>, <span class="fl">.05</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true"></a>it_max, tol <span class="op">=</span> <span class="dv">5000</span>, <span class="fl">1e-4</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true"></a>(_, _, Js1, theta1) <span class="op">=</span> ann.train_ANN_and_make_model_function(</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true"></a>    Y1, c1, d, K, h, it_max, tol, tau<span class="op">=</span>tau,</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true"></a>    y_min<span class="op">=</span>y0, y_max<span class="op">=</span>yf, c_min<span class="op">=</span>c0, c_max<span class="op">=</span>cf)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true"></a>(F1, dF1) <span class="op">=</span> ann.make_scaled_modfunc_and_grad(</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true"></a>    theta1, y0, yf, c0, cf, h<span class="op">=</span>h)</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true"></a></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true"></a><span class="co"># b is for binary, which is needed when SERIALIZING</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">&quot;test_theta.pickle&quot;</span>, <span class="st">&quot;wb&quot;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true"></a>    pickle.dump(theta1, <span class="bu">file</span>)</span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true"></a></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true"></a><span class="co"># b is for binary, which is needed when SERIALIZING</span></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">&quot;test_theta.pickle&quot;</span>, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true"></a>    saved_theta <span class="op">=</span> pickle.load(<span class="bu">file</span>)</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true"></a></span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true"></a>(_, _, Js2, theta2) <span class="op">=</span> ann.train_ANN_and_make_model_function(</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true"></a>    Y2, c2, d, K, h, it_max, tol, tau<span class="op">=</span>tau,</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true"></a>    y_min<span class="op">=</span>y0, y_max<span class="op">=</span>yf, c_min<span class="op">=</span>c0, c_max<span class="op">=</span>cf, theta<span class="op">=</span>saved_theta)</span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true"></a></span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true"></a>(F2, dF2) <span class="op">=</span> ann.make_scaled_modfunc_and_grad(</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true"></a>    theta2, y0, yf, c0, cf, h<span class="op">=</span>h)</span>
+<span id="cb3-47"><a href="#cb3-47" aria-hidden="true"></a></span>
+<span id="cb3-48"><a href="#cb3-48" aria-hidden="true"></a>t <span class="op">=</span> <span class="dv">101</span></span>
+<span id="cb3-49"><a href="#cb3-49" aria-hidden="true"></a>ys <span class="op">=</span> np.reshape(np.linspace(y0, yf, t), (<span class="dv">1</span>, t))</span>
+<span id="cb3-50"><a href="#cb3-50" aria-hidden="true"></a>cs, dcs <span class="op">=</span> np.reshape(Fe(ys), (<span class="dv">1</span>, t)), dFe(ys)</span>
+<span id="cb3-51"><a href="#cb3-51" aria-hidden="true"></a>Fs1, Fs2 <span class="op">=</span> F1(ys), F2(ys)</span>
+<span id="cb3-52"><a href="#cb3-52" aria-hidden="true"></a>dFs1, dFs2 <span class="op">=</span> dF1(ys), dF2(ys)</span>
+<span id="cb3-53"><a href="#cb3-53" aria-hidden="true"></a></span>
+<span id="cb3-54"><a href="#cb3-54" aria-hidden="true"></a>bErr, bFn, bdFn <span class="op">=</span> <span class="va">True</span>, <span class="va">True</span>, <span class="va">True</span></span>
+<span id="cb3-55"><a href="#cb3-55" aria-hidden="true"></a></span>
+<span id="cb3-56"><a href="#cb3-56" aria-hidden="true"></a><span class="cf">if</span> bErr:</span>
+<span id="cb3-57"><a href="#cb3-57" aria-hidden="true"></a>    plt.plot(np.concatenate((Js1, Js2)))</span>
+<span id="cb3-58"><a href="#cb3-58" aria-hidden="true"></a>    plt.yscale(<span class="st">&quot;log&quot;</span>)</span>
+<span id="cb3-59"><a href="#cb3-59" aria-hidden="true"></a>    plt.show()</span>
+<span id="cb3-60"><a href="#cb3-60" aria-hidden="true"></a><span class="cf">if</span> bFn:</span>
+<span id="cb3-61"><a href="#cb3-61" aria-hidden="true"></a>    plt.plot(ys.T, cs.T)</span>
+<span id="cb3-62"><a href="#cb3-62" aria-hidden="true"></a>    plt.plot(ys.T, Fs1.T)</span>
+<span id="cb3-63"><a href="#cb3-63" aria-hidden="true"></a>    plt.plot(ys.T, Fs2.T)</span>
+<span id="cb3-64"><a href="#cb3-64" aria-hidden="true"></a>    plt.show()</span>
+<span id="cb3-65"><a href="#cb3-65" aria-hidden="true"></a><span class="cf">if</span> bdFn:</span>
+<span id="cb3-66"><a href="#cb3-66" aria-hidden="true"></a>    plt.plot(ys.T, dcs.T)</span>
+<span id="cb3-67"><a href="#cb3-67" aria-hidden="true"></a>    plt.plot(ys.T, dFs1.T)</span>
+<span id="cb3-68"><a href="#cb3-68" aria-hidden="true"></a>    plt.plot(ys.T, dFs2.T)</span>
+<span id="cb3-69"><a href="#cb3-69" aria-hidden="true"></a>    plt.show()</span></code></pre></div>
+<h2 id="using-the-ann-with-the-given-trajectory-data">Using the ANN with the given trajectory data</h2>
+<p>The script <code>get_traj_data.py</code> gets the trajectory data from the folder <code>project_2_trajectories</code> which holds all the <code>.csv</code> files for the trajectories. The trajectories imported with the <code>concatenate</code> function from this script give the basis for training the ANN of the actual trajectories and using a previously trained ANN on data within the bounds of these sets.</p>
+<p>The ANN as a function approximator works best as an interpolation of the phase space, and the global min/max values discovered from the datasets are the appropriate values to perform Euler’s or Størmer-Verlet’s methods within.</p>
+<h3 id="example-of-training-the-ann-with-the-trajectory-data">Example of training the ANN with the trajectory data</h3>
+<p>Running the script <code>test_train_with_trajectory_data.py</code> performs this.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a><span class="im">import</span> ann</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a><span class="im">import</span> get_traj_data</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a><span class="im">import</span> pickle</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true"></a>first_set <span class="op">=</span> get_traj_data.concatenate(<span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true"></a>Q_min, Q_max <span class="op">=</span> np.<span class="bu">min</span>(first_set[<span class="st">&quot;Q&quot;</span>]), np.<span class="bu">max</span>(first_set[<span class="st">&quot;Q&quot;</span>])</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true"></a>V_min, V_max <span class="op">=</span> np.<span class="bu">min</span>(first_set[<span class="st">&quot;V&quot;</span>]), np.<span class="bu">max</span>(first_set[<span class="st">&quot;V&quot;</span>])</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true"></a>P_min, P_max <span class="op">=</span> np.<span class="bu">min</span>(first_set[<span class="st">&quot;P&quot;</span>]), np.<span class="bu">max</span>(first_set[<span class="st">&quot;P&quot;</span>])</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true"></a>T_min, T_max <span class="op">=</span> np.<span class="bu">min</span>(first_set[<span class="st">&quot;T&quot;</span>]), np.<span class="bu">max</span>(first_set[<span class="st">&quot;T&quot;</span>])</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true"></a>d, K, h, tau <span class="op">=</span> <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">1</span>, <span class="fl">.01</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true"></a>it_max, tol <span class="op">=</span> <span class="dv">1000</span>, <span class="fl">1e-4</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true"></a></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true"></a>(V, dV, JsV, theta_V) <span class="op">=</span> ann.train_ANN_and_make_model_function(</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true"></a>    first_set[<span class="st">&quot;Q&quot;</span>], first_set[<span class="st">&quot;V&quot;</span>], d, K, h, it_max, tol, tau <span class="op">=</span> tau,</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true"></a>    y_min <span class="op">=</span> Q_min, y_max <span class="op">=</span> Q_max, c_min <span class="op">=</span> V_min, c_max <span class="op">=</span> V_max, log<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true"></a>(T, dT, JsT, theta_T) <span class="op">=</span> ann.train_ANN_and_make_model_function(</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true"></a>    first_set[<span class="st">&quot;P&quot;</span>], first_set[<span class="st">&quot;T&quot;</span>], d, K, h, it_max, tol, tau <span class="op">=</span> tau,</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true"></a>    y_min <span class="op">=</span> P_min, y_max <span class="op">=</span> P_max, c_min <span class="op">=</span> T_min, c_max <span class="op">=</span> T_max, log<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true"></a><span class="co"># theta_V and theta_T can now be pickled</span></span></code></pre></div>
+<h3 id="example-of-using-an-already-trained-ann-to-get-t-and-v">Example of using an already trained ANN to get T and V</h3>
+<p>Running the script <code>test_with_trajectory_data.py</code> performs this.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="im">import</span> ann</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a><span class="im">import</span> get_traj_data</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true"></a>all_data <span class="op">=</span> get_traj_data.concatenate(<span class="dv">0</span>, <span class="dv">50</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true"></a>Q_min, Q_max <span class="op">=</span> np.<span class="bu">min</span>(all_data[<span class="st">&quot;Q&quot;</span>]), np.<span class="bu">max</span>(all_data[<span class="st">&quot;Q&quot;</span>])</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true"></a>V_min, V_max <span class="op">=</span> np.<span class="bu">min</span>(all_data[<span class="st">&quot;V&quot;</span>]), np.<span class="bu">max</span>(all_data[<span class="st">&quot;V&quot;</span>])</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true"></a>P_min, P_max <span class="op">=</span> np.<span class="bu">min</span>(all_data[<span class="st">&quot;P&quot;</span>]), np.<span class="bu">max</span>(all_data[<span class="st">&quot;P&quot;</span>])</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true"></a>T_min, T_max <span class="op">=</span> np.<span class="bu">min</span>(all_data[<span class="st">&quot;T&quot;</span>]), np.<span class="bu">max</span>(all_data[<span class="st">&quot;T&quot;</span>])</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true"></a><span class="im">import</span> pickle</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true"></a></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">&quot;test_pickles/theta_T.pickle&quot;</span>, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true"></a>    theta_T <span class="op">=</span> pickle.load(<span class="bu">file</span>)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">&quot;test_pickles/theta_V.pickle&quot;</span>, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true"></a>    theta_V <span class="op">=</span> pickle.load(<span class="bu">file</span>)</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true"></a></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true"></a>(T, dT) <span class="op">=</span> ann.make_scaled_modfunc_and_grad(theta_T, P_min, P_max, T_min, T_max)</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true"></a>(V, dV) <span class="op">=</span> ann.make_scaled_modfunc_and_grad(theta_V, Q_min, Q_max, V_min, V_max)</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true"></a></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true"></a>Qs, Vs <span class="op">=</span> all_data[<span class="st">&quot;Q&quot;</span>], all_data[<span class="st">&quot;V&quot;</span>]</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true"></a>Ps, Ts <span class="op">=</span> all_data[<span class="st">&quot;P&quot;</span>], all_data[<span class="st">&quot;T&quot;</span>]</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true"></a></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true"></a>k <span class="op">=</span> <span class="dv">10000</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true"></a></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true"></a>V_ann <span class="op">=</span> V(Qs)[<span class="dv">0</span>:k]</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true"></a>T_ann <span class="op">=</span> T(Ps)[<span class="dv">0</span>:k]</span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true"></a>H_ann <span class="op">=</span> V_ann <span class="op">+</span> T_ann</span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true"></a>Hs <span class="op">=</span> (Vs <span class="op">+</span> Ts)[<span class="dv">0</span>:k]</span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true"></a></span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true"></a>plt.plot(H_ann)</span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true"></a>plt.plot(Hs)</span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true"></a>plt.show()</span></code></pre></div>
+<h2 id="using-euler-and-størmer-verlet-with-the-gradients-from-the-ann">Using Euler and Størmer-Verlet with the gradients from the ANN</h2>
+<p>To use Euler or Størmer-Verlet, one must import <code>intmethods.py</code>.</p>
+<p>The vectors given as the initial position and momentum of the particle must be submitted as a n-vector with a defined second axis size. This means it must have the numpy size <code>v.shape = (n, 1)</code> which can be ensured by running the function <code>np.reshape(v, (n, 1))</code>.</p>
+<p>The return from the <code>intMeth</code> function is a tuple of vector-collections. One for momentum, one for position. These numpy arrays have the size <code>(n, it_max)</code>, where <code>n</code> is the dimension of the submitted vector.</p>
+<p><code>intMeth</code> is a general function which will perform its stepping using the provided function <code>func</code>. This can either be <code>symEuler</code>, <code>stVerlet</code> or any other function designed to work with the machinery of <code>intMeth</code>.</p>
+<h3 id="example-of-using-the-integrator-methods">Example of using the integrator methods</h3>
+<p>Running the script <code>test_actual_hamiltonian.py</code> performs this.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a><span class="im">import</span> get_traj_data <span class="im">as</span> gtd</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a><span class="im">import</span> ann</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a><span class="im">import</span> pickle</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a><span class="im">import</span> time</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true"></a><span class="im">import</span> intmethods <span class="im">as</span> im</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true"></a></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">&quot;__main__&quot;</span>:</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true"></a>    data <span class="op">=</span> gtd.generate_data(<span class="dv">44</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true"></a>    (qmin, qmax, vmin, vmax, pmin, pmax, tmin, tmax) <span class="op">=</span> gtd.get_data_bounds()</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true"></a>    <span class="cf">with</span> <span class="bu">open</span>(<span class="st">&quot;thetas/V_4x5.pickle&quot;</span>, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true"></a>        th_V <span class="op">=</span> pickle.load(<span class="bu">file</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true"></a>    <span class="cf">with</span> <span class="bu">open</span>(<span class="st">&quot;thetas/T_4x5.pickle&quot;</span>, <span class="st">&quot;rb&quot;</span>) <span class="im">as</span> <span class="bu">file</span>:</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true"></a>        th_T <span class="op">=</span> pickle.load(<span class="bu">file</span>)</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true"></a>    (T, dT) <span class="op">=</span> ann.make_scaled_modfunc_and_grad(th_T, pmin, pmax, tmin, tmax)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true"></a>    (V, dV) <span class="op">=</span> ann.make_scaled_modfunc_and_grad(th_V, qmin, qmax, vmin, vmax)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true"></a>    trueV, trueT <span class="op">=</span> data[<span class="st">&quot;V&quot;</span>], data[<span class="st">&quot;T&quot;</span>]</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true"></a>    trueH <span class="op">=</span> trueV <span class="op">+</span> trueT</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true"></a></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true"></a>    Qs, Ps <span class="op">=</span> data[<span class="st">&quot;Q&quot;</span>], data[<span class="st">&quot;P&quot;</span>]</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true"></a>    annV, annT <span class="op">=</span> V(Qs), T(Ps)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true"></a>    annH <span class="op">=</span> annV <span class="op">+</span> annT</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true"></a></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true"></a>    euler, strVer <span class="op">=</span> im.symEuler, im.stVerlet</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true"></a></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true"></a>    k, l, off <span class="op">=</span> <span class="bu">len</span>(Qs.T), <span class="dv">1</span>, <span class="dv">0</span></span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true"></a>    its <span class="op">=</span> l <span class="op">*</span> k <span class="op">-</span> off</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true"></a>    dt <span class="op">=</span> <span class="dv">20</span> <span class="op">/</span> its</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true"></a>    p0 <span class="op">=</span> np.reshape(data[<span class="st">&quot;P&quot;</span>][:, off], (<span class="dv">3</span>, <span class="dv">1</span>))</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true"></a>    q0 <span class="op">=</span> np.reshape(data[<span class="st">&quot;Q&quot;</span>][:, off], (<span class="dv">3</span>, <span class="dv">1</span>))</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true"></a></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true"></a>    bEuler <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true"></a>    bStrVer <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true"></a></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true"></a>    <span class="cf">if</span> bEuler:</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true"></a>        eulPs, eulQs <span class="op">=</span> im.intMeth(p0, q0, dT, dV, its, euler, dt)</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true"></a>        eulerV, eulerT <span class="op">=</span> V(eulQs), T(eulPs)</span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true"></a>        eulerH <span class="op">=</span> eulerV <span class="op">+</span> eulerT</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true"></a>        eulQNorm <span class="op">=</span> np.array([np.linalg.norm(y) <span class="cf">for</span> y <span class="kw">in</span> eulQs.T])</span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true"></a></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true"></a>    <span class="cf">if</span> bStrVer:</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true"></a>        strPs, strQs <span class="op">=</span> im.intMeth(p0, q0, dT, dV, its, strVer, dt)</span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true"></a>        strVerV, strVerT <span class="op">=</span> V(strQs), T(strPs)</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true"></a>        strH <span class="op">=</span> strVerV <span class="op">+</span> strVerT</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true"></a>        strQNorm <span class="op">=</span> np.array([np.linalg.norm(y) <span class="cf">for</span> y <span class="kw">in</span> strQs.T])</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true"></a></span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true"></a>    trueQNorm <span class="op">=</span> np.array([np.linalg.norm(y) <span class="cf">for</span> y <span class="kw">in</span> Qs.T])</span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true"></a></span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true"></a>    t0, tf <span class="op">=</span> np.<span class="bu">min</span>(data[<span class="st">&quot;t&quot;</span>]), np.<span class="bu">max</span>(data[<span class="st">&quot;t&quot;</span>])</span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true"></a>    trueTime <span class="op">=</span> np.linspace(t0, tf, k)</span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true"></a>    intTime <span class="op">=</span> np.linspace(t0, tf, l <span class="op">*</span> k <span class="op">+</span> <span class="dv">1</span>)[off:]</span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true"></a></span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true"></a>    bPlotHamilton <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true"></a>    bPlotPath <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true"></a></span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true"></a>    <span class="cf">if</span> bPlotHamilton:</span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true"></a>        plt.plot(trueTime, trueH[:k], label<span class="op">=</span><span class="st">&quot;True Hamiltonian&quot;</span>)</span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true"></a>        plt.plot(trueTime, annH[:k], label<span class="op">=</span><span class="st">&quot;Hamiltonian from ANN&quot;</span>)</span>
+<span id="cb6-65"><a href="#cb6-65" aria-hidden="true"></a>        <span class="cf">if</span> bEuler:</span>
+<span id="cb6-66"><a href="#cb6-66" aria-hidden="true"></a>            plt.plot(intTime, eulerH, label<span class="op">=</span><span class="st">&quot;Euler Hamiltonian&quot;</span>)</span>
+<span id="cb6-67"><a href="#cb6-67" aria-hidden="true"></a>        <span class="cf">if</span> bStrVer:</span>
+<span id="cb6-68"><a href="#cb6-68" aria-hidden="true"></a>            plt.plot(intTime, strH, label<span class="op">=</span><span class="st">&quot;Størmer-Verlet Hamiltonian&quot;</span>)</span>
+<span id="cb6-69"><a href="#cb6-69" aria-hidden="true"></a>        plt.legend(loc<span class="op">=</span><span class="st">&quot;best&quot;</span>)</span>
+<span id="cb6-70"><a href="#cb6-70" aria-hidden="true"></a>        plt.show()</span>
+<span id="cb6-71"><a href="#cb6-71" aria-hidden="true"></a>    <span class="cf">if</span> bPlotPath:</span>
+<span id="cb6-72"><a href="#cb6-72" aria-hidden="true"></a>        plt.plot(trueTime, trueQNorm, label<span class="op">=</span><span class="st">&quot;Norm of Q&quot;</span>)</span>
+<span id="cb6-73"><a href="#cb6-73" aria-hidden="true"></a>        <span class="cf">if</span> bEuler:</span>
+<span id="cb6-74"><a href="#cb6-74" aria-hidden="true"></a>            plt.plot(intTime, eulQNorm, label<span class="op">=</span><span class="st">&quot;Norm of Euler&#39;s Q&quot;</span>)</span>
+<span id="cb6-75"><a href="#cb6-75" aria-hidden="true"></a>        <span class="cf">if</span> bStrVer:</span>
+<span id="cb6-76"><a href="#cb6-76" aria-hidden="true"></a>            plt.plot(intTime, strQNorm, label<span class="op">=</span><span class="st">&quot;Norm of Størmer-Verlet&#39;s Q&quot;</span>)</span>
+<span id="cb6-77"><a href="#cb6-77" aria-hidden="true"></a>        plt.legend(loc<span class="op">=</span><span class="st">&quot;best&quot;</span>)</span>
+<span id="cb6-78"><a href="#cb6-78" aria-hidden="true"></a>        plt.show()</span></code></pre></div>
