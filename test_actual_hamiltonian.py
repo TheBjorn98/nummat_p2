@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     if bEuler:
         t6 = time.time()
-        eulPs, eulQs = im.intMeth(p0.T, q0.T, dT, dV, its, 1e-10, euler, dt)
+        eulPs, eulQs = im.intMeth(p0, q0, dT, dV, its, 1e-10, euler, dt)
         eulerV = V(eulQs)
         eulerT = T(eulPs)
         eulerH = eulerV + eulerT
@@ -82,7 +82,7 @@ if __name__ == "__main__":
 
     if bStrVer:
         t7 = time.time()
-        strPs, strQs = im.intMeth(p0.T, q0.T, dT, dV, its, 1e-10, strVer, dt)
+        strPs, strQs = im.intMeth(p0, q0, dT, dV, its, 1e-10, strVer, dt)
         strVerV = V(strQs)
         strVerT = T(strPs)
         strH = strVerV + strVerT
