@@ -1,5 +1,4 @@
 import numpy as np
-# from ann import make_diff_grad_func
 import get_traj_data as gtd
 import ann
 import pickle
@@ -72,7 +71,7 @@ if __name__ == "__main__":
 
     if bEuler:
         t6 = time.time()
-        eulPs, eulQs = im.intMeth(p0, q0, dT, dV, its, 1e-10, euler, dt)
+        eulPs, eulQs = im.intMeth(p0, q0, dT, dV, its, euler, dt)
         eulerV = V(eulQs)
         eulerT = T(eulPs)
         eulerH = eulerV + eulerT
@@ -82,7 +81,7 @@ if __name__ == "__main__":
 
     if bStrVer:
         t7 = time.time()
-        strPs, strQs = im.intMeth(p0, q0, dT, dV, its, 1e-10, strVer, dt)
+        strPs, strQs = im.intMeth(p0, q0, dT, dV, its, strVer, dt)
         strVerV = V(strQs)
         strVerT = T(strPs)
         strH = strVerV + strVerT

@@ -330,3 +330,86 @@ plt.show()
 ```
 
 ## Using Euler and Størmer-Verlet with the gradients from the ANN
+
+
+
+```python
+import numpy as np
+import get_traj_data as gtd
+import ann
+import pickle
+import matplotlib.pyplot as plt
+import time
+import intmethods as im
+
+if __name__ == "__main__":
+    data = gtd.generate_data(44)
+
+    (qmin, qmax, vmin, vmax, pmin, pmax, tmin, tmax) = gtd.get_data_bounds()
+
+    with open("thetas/V_4x5.pickle", "rb") as file:
+        th_V = pickle.load(file)
+
+    with open("thetas/T_4x5.pickle", "rb") as file:
+        th_T = pickle.load(file)
+
+    (T, dT) = ann.make_scaled_modfunc_and_grad(th_T, pmin, pmax, tmin, tmax)
+    (V, dV) = ann.make_scaled_modfunc_and_grad(th_V, qmin, qmax, vmin, vmax)
+
+    trueV, trueT = data["V"], data["T"]
+    trueH = trueV + trueT
+
+    Qs, Ps = data["Q"], data["P"]
+    annV, annT = V(Qs), T(Ps)
+    annH = annV + annT
+
+    euler, strVer = im.symEuler, im.stVerlet
+
+    k, l, off = len(Qs.T), 1, 0
+    its = l * k - off
+    dt = 20 / its
+    p0 = np.reshape(data["P"][:, off], (3, 1))
+    q0 = np.reshape(data["Q"][:, off], (3, 1))
+
+    bEuler = True
+    bStrVer = False
+
+    if bEuler:
+        eulPs, eulQs = im.intMeth(p0, q0, dT, dV, its, euler, dt)
+        eulerV, eulerT = V(eulQs), T(eulPs)
+        eulerH = eulerV + eulerT
+        eulQNorm = np.array([np.linalg.norm(y) for y in eulQs.T])
+
+    if bStrVer:
+        strPs, strQs = im.intMeth(p0, q0, dT, dV, its, strVer, dt)
+        strVerV, strVerT = V(strQs), T(strPs)
+        strH = strVerV + strVerT
+        strQNorm = np.array([np.linalg.norm(y) for y in strQs.T])
+
+    trueQNorm = np.array([np.linalg.norm(y) for y in Qs.T])
+
+    t0, tf = np.min(data["t"]), np.max(data["t"])
+    trueTime = np.linspace(t0, tf, k)
+    intTime = np.linspace(t0, tf, l * k + 1)[off:]
+
+    bPlotHamilton = True
+    bPlotPath = True
+
+    if bPlotHamilton:
+        plt.plot(trueTime, trueH[:k], label="True Hamiltonian")
+        plt.plot(trueTime, annH[:k], label="Hamiltonian from ANN")
+        if bEuler:
+            plt.plot(intTime, eulerH, label="Euler Hamiltonian")
+        if bStrVer:
+            plt.plot(intTime, strH, label="Størmer-Verlet Hamiltonian")
+        plt.legend(loc="best")
+        plt.show()
+    if bPlotPath:
+        plt.plot(trueTime, trueQNorm, label="Norm of Q")
+        if bEuler:
+            plt.plot(intTime, eulQNorm, label="Norm of Euler's Q")
+        if bStrVer:
+            plt.plot(intTime, strQNorm, label="Norm of Størmer-Verlet's Q")
+        plt.legend(loc="best")
+        plt.show()
+```

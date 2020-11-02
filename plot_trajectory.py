@@ -34,8 +34,8 @@ q0 = np.reshape(Qs[:, off], (3, 1))
 its = (k * l - off) // m
 dt = 10 / its
 
-eulPs, eulQs = intMeth(p0, q0, dT, dV, its, 1e-10, symEuler, dt)
-stPs, stQs = intMeth(p0, q0, dT, dV, its, 1e-10, stVerlet, dt)
+eulPs, eulQs = intMeth(p0, q0, dT, dV, its, symEuler, dt)
+stPs, stQs = intMeth(p0, q0, dT, dV, its, stVerlet, dt)
 
 
 pfig, (pax1, pax2, pax3) = plt.subplots(3, 1, sharex=True)
