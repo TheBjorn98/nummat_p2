@@ -59,7 +59,7 @@ ax2.set_xlim(0, k)
 ax1.legend(loc="upper right")
 ax2.legend(loc="upper right")
 
-bSave = True
+bSave = False
 if bSave:
     plt.savefig(f"traj_plots/VT_batch_{dStart}_{dEnd}.pdf")
     plt.savefig(f"traj_plots/VT_batch_{dStart}_{dEnd}.png")

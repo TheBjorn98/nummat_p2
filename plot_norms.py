@@ -115,7 +115,7 @@ if __name__ == "__main__":
     ax1.legend(loc="lower right", prop={"size": 6})
     ax2.legend(loc="lower right", prop={"size": 6})
 
-    bSave = True
+    bSave = False
 
     ax1.set_ylabel("Position, q")
     # ax1.set_title(f"Norms of p and q for batch {bNum}")

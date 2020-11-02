@@ -61,7 +61,8 @@ pax1.set_ylabel(r"$p_1$")
 pax2.set_ylabel(r"$p_2$")
 pax3.set_ylabel(r"$p_3$")
 
-bSave = True
+bSave = False
+
 if bSave:
     plt.savefig(f"traj_plots/components_p_batch_{bNum}.pdf")
     plt.savefig(f"traj_plots/components_p_batch_{bNum}.png")
@@ -91,7 +92,6 @@ qax1.set_ylabel(r"$q_1$")
 qax2.set_ylabel(r"$q_2$")
 qax3.set_ylabel(r"$q_3$")
 
-bSave = True
 if bSave:
     plt.savefig(f"traj_plots/components_q_batch_{bNum}.pdf")
     plt.savefig(f"traj_plots/components_q_batch_{bNum}.png")

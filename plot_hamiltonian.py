@@ -109,7 +109,7 @@ if __name__ == "__main__":
     plt.xlabel("Time, t")
     plt.ylabel("Energy of H")
 
-    bSave = True
+    bSave = False
     if bSave:
         plt.savefig(f"traj_plots/hamiltonian_batch_{bNum}.pdf")
         plt.savefig(f"traj_plots/hamiltonian_batch_{bNum}.png")
