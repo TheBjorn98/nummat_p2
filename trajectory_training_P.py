@@ -28,7 +28,7 @@ def test_single_batch(Y, c, i, theta=None, tau=0.0001):
     d = 4
     K = 5
     h = 1
-    it_max = 1000000
+    it_max = 10000
     tol = 1e-4
 
     (F, dF, Js, theta) = ann.train_ANN_and_make_model_function(
@@ -49,7 +49,8 @@ def test_single_batch(Y, c, i, theta=None, tau=0.0001):
     return theta
 
 
-foldername = "T_trained_4x5_new"
+# foldername = "T_trained_4x5_new"
+foldername = "T_trained_4x5_bad"
 
 
 def startup():
@@ -58,7 +59,7 @@ def startup():
     os.chdir(f"results/{foldername}")
     Y = batch_data["P"][:, :1000]
     c = batch_data["T"][:1000]
-    theta = test_single_batch(Y, c, 0, tau=0.001)
+    theta = test_single_batch(Y, c, 0, tau=0.0003)
 
     with open("theta.pickle", "wb") as file:
         pickle.dump(theta, file)
@@ -112,9 +113,9 @@ def resume_with_big_data(lo, hi, plot_index=0):
 if __name__ == "__main__":
     # startup()
     # resume()
-    # for i in range(20):
-    #     resume_with_big_data(i, i + 2, i)
-    # resume_with_big_data(0, 20, 24)
-    # resume_with_big_data(10, 30, 25)
-    # resume_with_big_data(20, 40, 26)
-    resume_with_big_data(0, 40, 23)
+    for i in range(19, 20):
+        resume_with_big_data(i, i + 2, i)
+    resume_with_big_data(0, 20, 21)
+    resume_with_big_data(10, 30, 22)
+    resume_with_big_data(20, 40, 23)
+    # resume_with_big_data(0, 40, 24)
