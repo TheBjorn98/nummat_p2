@@ -1,5 +1,5 @@
 import numpy as np
-import get_traj_data
+import get_traj_data as gtd
 import ann
 import pickle
 import matplotlib.pyplot as plt
@@ -12,10 +12,12 @@ if __name__ == "__main__":
     t0 = time.time()
     print("test script started...")
 
-    data = get_traj_data.concatenate(2, 3)
+    # data = get_traj_data.concatenate(2, 3)
+    bNum = 2
+    data = gtd.generate_data(bNum)
 
     (qmin, qmax, vmin, vmax, pmin, pmax, tmin, tmax) = \
-        get_traj_data.get_data_bounds()
+        gtd.get_data_bounds()
 
     t1 = time.time()
     tLoadData = t1 - t0
@@ -95,23 +97,21 @@ if __name__ == "__main__":
     trueTime = np.linspace(t0, tf, k)
     intTime = np.linspace(t0, tf, l * k + 1)[off:]
 
-    bPlotHamilton = True
-    bPlotPath = True
+    plt.plot(trueTime, trueH[:k], label="True Hamiltonian")
+    plt.plot(trueTime, annH[:k], label="Hamiltonian from ANN")
+    if bEuler:
+        plt.plot(intTime, eulerH, label="Euler Hamiltonian")
+    if bStrVer:
+        plt.plot(intTime, strH, label="Størmer-Verlet Hamiltonian")
+    plt.legend(loc="lower right", prop={"size": 10})
 
-    if bPlotHamilton:
-        plt.plot(trueTime, trueH[:k], label="True Hamiltonian")
-        plt.plot(trueTime, annH[:k], label="Hamiltonian from ANN")
-        if bEuler:
-            plt.plot(intTime, eulerH, label="Euler Hamiltonian")
-        if bStrVer:
-            plt.plot(intTime, strH, label="Størmer-Verlet Hamiltonian")
-        plt.legend(loc="best")
-        plt.show()
-    if bPlotPath:
-        plt.plot(trueTime, trueQNorm, label="Norm of Q")
-        if bEuler:
-            plt.plot(intTime, eulQNorm, label="Norm of Euler's Q")
-        if bStrVer:
-            plt.plot(intTime, strQNorm, label="Norm of Størmer-Verlet's Q")
-        plt.legend(loc="best")
-        plt.show()
+    # plt.title(f"Hamiltonian time evolution for batch {bNum}")
+    plt.xlabel("Time, t")
+    plt.ylabel("Energy of H")
+
+    bSave = True
+    if bSave:
+        plt.savefig(f"traj_plots/hamiltonian_batch_{bNum}.pdf")
+        plt.savefig(f"traj_plots/hamiltonian_batch_{bNum}.png")
+
+    plt.show()

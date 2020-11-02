@@ -249,7 +249,7 @@ previously trained ANN on data within the bounds of these sets.
 
 The ANN as a function approximator works best as an interpolation of the
 phase space, and the global min/max values discovered from the datasets are the
-appropriate values to perform Euler's or Strømer-Verlet's methods within.
+appropriate values to perform Euler's or Størmer-Verlet's methods within.
 
 ### Example of training the ANN with the trajectory data
 
@@ -329,4 +329,4 @@ plt.plot(Hs)
 plt.show()
 ```
 
-## Using Euler and Strømer-Verlet with the gradients from the ANN
+## Using Euler and Størmer-Verlet with the gradients from the ANN

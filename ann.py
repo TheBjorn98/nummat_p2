@@ -416,6 +416,8 @@ def trainANN(
         dim = np.sum([np.prod(W.shape), np.prod(b.shape), np.prod(w.shape), 1])
         descent_state = setupAdam(dim)
         descent_function = adamTheta
+    else:
+        raise Exception("Illegal descent mode.")
 
     # Iteration
 
