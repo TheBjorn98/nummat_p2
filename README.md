@@ -1,6 +1,5 @@
 ---
 title: ReadMe for project 2 in numerical mathematics
-author: Bjørnar Kaarevik
 date: 30.10.2020
 ---
 
