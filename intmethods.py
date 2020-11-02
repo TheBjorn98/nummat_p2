@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def symEuler(p0, q0, dTdp, dVdq, h):  # Burde sende de inn som np.array()
-    q = q0 + h * dTdp(p0)
-    p = p0 - h * dVdq(q)
+def symEuler(p0, q0, dTdp, dVdq, dt):  # Burde sende de inn som np.array()
+    q = q0 + dt * dTdp(p0)
+    p = p0 - dt * dVdq(q)
     return p, q
 
 
@@ -40,7 +40,7 @@ def intMeth(p0, q0, dTdp, dVdq, it_max, tol, func, step):
     qs.append(q0)
     p, q = p0, q0
 
-    lp, lq = np.shape(p0)[1], np.shape(q0)[1]
+    lp, lq = np.shape(p0)[0], np.shape(q0)[0]
 
     diff = 100
     it = 0
@@ -83,8 +83,8 @@ def keplerTwoBody():
 
 
 if __name__ == "__main__":
-    p0 = np.array([0, 1.3])
-    q0 = np.array([1, 0])
+    p0 = np.reshape(np.array([0, 1]), (2, 1))
+    q0 = np.reshape(np.array([1, 0]), (2, 1))
 
     pen_dTdp, pen_dVdq = nonlinPend()
     euler_pen_p, euler_pen_q = intMeth(
