@@ -9,7 +9,7 @@ Link to the project report:
 ## Training the ANN and getting the approximator and gradient
 
 Training the ANN is done with the `train_ANN_and_make_model_function` function
-in `ann-py`. This function invokes the underlying `trainANN` function which
+in `ann.py`. This function invokes the underlying `trainANN` function which
 performs the actual iteration and updating of theta.
 
 Due to lacking abilities of precognition, the ANN training function returns
