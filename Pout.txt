@@ -1,0 +1,2 @@
+took 66674.02 seconds to train
+J = 2.755240536793975
