@@ -331,7 +331,24 @@ plt.show()
 
 ## Using Euler and Størmer-Verlet with the gradients from the ANN
 
+To use Euler or Størmer-Verlet, one must import `intmethods.py`.
 
+The vectors given as the initial position and momentum of the particle must be
+submitted as a n-vector with a defined second axis size. This means it must have
+the numpy size `v.shape = (n, 1)` which can be ensured by running the function
+`np.reshape(v, (n, 1))`.
+
+The return from the `intMeth` function is a tuple of vector-collections. One
+for momentum, one for position. These numpy arrays have the size `(n, it_max)`,
+where `n` is the dimension of the submitted vector.
+
+`intMeth` is a general function which will perform its stepping using the
+provided function `func`. This can either be `symEuler`, `stVerlet` or any
+other function designed to work with the machinery of `intMeth`.
+
+### Example of using the integrator methods
+
+Running the script `test_actual_hamiltonian.py` performs this.
 
 ```python
 import numpy as np
