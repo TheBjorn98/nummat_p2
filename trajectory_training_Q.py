@@ -28,7 +28,7 @@ def test_single_batch(Y, c, i, theta=None, tau=0.0001):
     d = 4
     K = 5
     h = 1
-    it_max = 1000000
+    it_max = 4000000
     tol = 1e-4
 
     (F, dF, Js, theta) = ann.train_ANN_and_make_model_function(

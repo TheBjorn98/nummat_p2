@@ -28,7 +28,7 @@ def test_single_batch(Y, c, i, theta=None, tau=0.0001):
     d = 4
     K = 5
     h = 1
-    it_max = 10000
+    it_max = 4000000
     tol = 1e-4
 
     (F, dF, Js, theta) = ann.train_ANN_and_make_model_function(
@@ -49,8 +49,8 @@ def test_single_batch(Y, c, i, theta=None, tau=0.0001):
     return theta
 
 
-# foldername = "T_trained_4x5_new"
-foldername = "T_trained_4x5_bad"
+foldername = "T_trained_4x5_new"
+# foldername = "T_trained_4x5_bad"
 
 
 def startup():
@@ -113,9 +113,9 @@ def resume_with_big_data(lo, hi, plot_index=0):
 if __name__ == "__main__":
     # startup()
     # resume()
-    for i in range(19, 20):
-        resume_with_big_data(i, i + 2, i)
-    resume_with_big_data(0, 20, 21)
-    resume_with_big_data(10, 30, 22)
-    resume_with_big_data(20, 40, 23)
-    # resume_with_big_data(0, 40, 24)
+    # for i in range(19, 20):
+    #     resume_with_big_data(i, i + 2, i)
+    # resume_with_big_data(0, 20, 21)
+    # resume_with_big_data(10, 30, 22)
+    # resume_with_big_data(20, 40, 23)
+    resume_with_big_data(0, 40, 24)
