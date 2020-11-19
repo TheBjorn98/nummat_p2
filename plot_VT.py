@@ -12,10 +12,10 @@ dStart, dEnd = 40, 50
 # data = gtd.generate_data(2)
 data = gtd.concatenate(dStart, dEnd)
 
-with open("test_pickles/theta_T.pickle", "rb") as file:
+with open("thetas/theta_T_new.pickle", "rb") as file:
     theta_T = pickle.load(file)
 
-with open("test_pickles/theta_V.pickle", "rb") as file:
+with open("thetas/theta_V_new.pickle", "rb") as file:
     theta_V = pickle.load(file)
 
 (T, dT) = ann.make_scaled_modfunc_and_grad(theta_T, pmin, pmax, tmin, tmax)

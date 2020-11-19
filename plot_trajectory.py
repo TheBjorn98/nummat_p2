@@ -11,10 +11,10 @@ data = gtd.generate_data(bNum)
 
 (qmin, qmax, vmin, vmax, pmin, pmax, tmin, tmax) = gtd.get_data_bounds()
 
-with open("test_pickles/theta_T.pickle", "rb") as file:
+with open("thetas/theta_T_new.pickle", "rb") as file:
     theta_T = pickle.load(file)
 
-with open("test_pickles/theta_V.pickle", "rb") as file:
+with open("thetas/theta_V_new.pickle", "rb") as file:
     theta_V = pickle.load(file)
 
 (T, dT) = ann.make_scaled_modfunc_and_grad(theta_T, pmin, pmax, tmin, tmax)

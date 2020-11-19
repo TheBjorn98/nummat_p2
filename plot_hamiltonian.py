@@ -23,10 +23,10 @@ if __name__ == "__main__":
     tLoadData = t1 - t0
     print(f"Loaded data in {tLoadData:.3f} s")
 
-    with open("test_pickles/theta_V.pickle", "rb") as file:
+    with open("thetas/theta_V_new.pickle", "rb") as file:
         th_V = pickle.load(file)
 
-    with open("test_pickles/theta_T.pickle", "rb") as file:
+    with open("thetas/theta_T_new.pickle", "rb") as file:
         th_T = pickle.load(file)
 
     t2 = time.time()
